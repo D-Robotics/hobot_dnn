@@ -110,7 +110,7 @@ DNNNodeSample::DNNNodeSample(const std::string& node_name,
   ros_img_subscription_ =
       this->create_subscription<hbm_img_msgs::msg::HbmMsg1080P>(
           "/hbmem_img",
-          10,
+          rclcpp::SensorDataQoS(),
           std::bind(&DNNNodeSample::FeedImg, this, std::placeholders::_1));
   // 创建消息发布者，发布算法推理消息
   msg_publisher_ = this->create_publisher<ai_msgs::msg::PerceptionTargets>(
