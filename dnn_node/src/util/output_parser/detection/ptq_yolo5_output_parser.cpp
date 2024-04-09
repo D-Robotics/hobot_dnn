@@ -18,6 +18,7 @@
 #include <iostream>
 #include <queue>
 #include <fstream>
+#include <future>
 
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"
@@ -373,10 +374,66 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
   perception.type = Perception::DET;
   std::vector<Detection> dets;
 
+  auto ts_start = std::chrono::steady_clock::now();
+  std::vector<std::future<std::shared_ptr<Detection>>> futs;
   for (size_t i = 0; i < output_tensors.size(); i++) {
-    ParseTensor(output_tensors[i], static_cast<int>(i), dets);
+    // ParseTensor(output_tensors[i], static_cast<int>(i), dets);
+
+    auto fut = std::async(std::launch::async, [&output_tensors, i](){
+      std::shared_ptr<Detection> sp_det = nullptr;
+      std::vector<Detection> _dets;
+      auto start = std::chrono::steady_clock::now();
+      ParseTensor(output_tensors[i], static_cast<int>(i), _dets);
+      int time_ms =
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::steady_clock::now() - start)
+              .count();
+      RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Yolo5_detection_parser"),
+                      "parse tensor "
+                      << i
+                      << " cost [" << time_ms << "]"
+                      );
+      if (!_dets.empty()) {
+        sp_det = std::make_shared<Detection>(_dets.front());
+      }
+      return sp_det;
+    });
+    
+    futs.push_back(std::move(fut));
   }
+  for (size_t i = 0; i < futs.size(); i++) {
+    if (!futs[i].valid()) {
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),
+                  "fut is not valid");
+      return -1;
+    }
+    futs[i].wait();
+    auto det = futs[i].get();
+    if (det) {
+      dets.emplace_back(*det);
+    }
+  }
+
+  int parse_tensor_time_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - ts_start)
+          .count();
+  ts_start = std::chrono::steady_clock::now();
+
   yolo5_nms(dets, nms_threshold_, nms_top_k_, perception.det, false);
+  
+  int nms_time_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - ts_start)
+          .count();
+
+  RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Yolo5_detection_parser"),
+                   "output_tensors size: "
+                   << output_tensors.size()
+                   << ", parse_tensor_time_ms [" << parse_tensor_time_ms
+                   << "] nms_time_ms [" << nms_time_ms << "]"
+                   );
+
   return 0;
 }
 
