@@ -61,7 +61,7 @@ int32_t ModelInferTask::SetInputs(
   auto const batch_input_count{model_->GetBatchInputCount()};
   // for pyramid batch inputs, should set separate inputs to processor
   // other type batch_input_count == input_count, do not support batch separate
-  if ((inputs.size() != static_cast<uint32_t>(batch_input_count))) {
+  if ((inputs.size() != static_cast<size_t>(batch_input_count))) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
       "Here inputs size != batch_input_count. Pyramid batch model must set "
       "separate inputs to process, such as: model input is batch n, you should "
@@ -128,7 +128,7 @@ int32_t ModelInferTask::ProcessInput() {
   int32_t process_count{0};
 
   // pyramid batch model's inputs_ must be separate
-  for (uint32_t i{0U}; i < inputs_.size(); i++) {
+  for (size_t i{0U}; i < inputs_.size(); i++) {
     if (inputs_[i] != nullptr) {
 
       if (input_tensors_[i] == nullptr) {
@@ -141,7 +141,7 @@ int32_t ModelInferTask::ProcessInput() {
             1;
         input_tensors_[i] = std::shared_ptr<DNNTensor>(
             static_cast<DNNTensor *>(&input_dnn_tensors_[i]),
-            [](DNNTensor const *const tensor) {});
+            [](DNNTensor const *const tensor) {delete tensor;});
       }
 
       std::shared_ptr<CropConfig> input_conf = std::make_shared<CropConfig>();
@@ -149,8 +149,6 @@ int32_t ModelInferTask::ProcessInput() {
 
       hbDNNTensorProperties tensor_properties;
       hbDNNGetInputTensorProperties(&tensor_properties, model_->GetDNNHandle(), i);
-      int32_t width = 0;
-      int32_t height = 0;
       if (tensor_properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {
         input_conf->width = tensor_properties.validShape.dimensionSize[2];
         input_conf->height = tensor_properties.validShape.dimensionSize[1];
@@ -163,13 +161,13 @@ int32_t ModelInferTask::ProcessInput() {
               input_tensors_[i], input_conf, inputs_[i]);
       if (ret != HB_DNN_SUCCESS) {
         RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-          "Input process failed, input branch: %d, ret[%d]", i, HB_DNN_RUN_TASK_FAILED);
+          "Input process failed, input branch: %zu, ret[%d]", i, HB_DNN_RUN_TASK_FAILED);
         return HB_DNN_RUN_TASK_FAILED;
       }
       process_count++;
     } else {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-          "DNNInput must be set for branch:{%d}", i);
+          "DNNInput must be set for branch:{%zu}", i);
       return HB_DNN_API_USE_ERROR;
     }
   }
@@ -224,7 +222,7 @@ int32_t ModelInferTask::PrepareInferInputOutput() {
   for (size_t i{0U}; i < input_dnn_tensors_.size(); i++) {
     if (input_dnn_tensors_[i].sysMem[0].virAddr == nullptr) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-              "Input is not processed or tensor is not set for branch:", i);
+              "Input is not processed or tensor is not set for branch: %zu", i);
       return HB_DNN_API_USE_ERROR;
     }
   }

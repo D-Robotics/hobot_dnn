@@ -49,7 +49,7 @@ int32_t CropProcessor::Process(std::shared_ptr<DNNTensor>& tensor,
 
   if (crop_config->x % 2 != 0 ||
       crop_config->y % 2 != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "x,y expected even, but got x: %d, y:", crop_config->x, crop_config->y);
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "x,y expected even, but got x: %d, y: %d", crop_config->x, crop_config->y);
     return -1;
   }
   if (crop_config->x >= pyramid_input->width ||

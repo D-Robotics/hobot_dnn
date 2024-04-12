@@ -31,7 +31,7 @@ void GetTopkResult(std::shared_ptr<DNNTensor> &tensor,
 
 const char *GetClsName(int id);
 
-int top_k_ = 1;
+size_t top_k_ = 1;
 std::vector<std::string> class_names_;
 
 int InitClassNames(const std::string &cls_name_file) {

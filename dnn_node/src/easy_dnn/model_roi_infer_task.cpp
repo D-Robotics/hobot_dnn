@@ -52,7 +52,7 @@ int32_t ModelRoiInferTask::SetInputs(
     std::vector<std::shared_ptr<DNNInput>> &inputs) {
   if (inputs.size() != inputs_.size()) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-              "Inpus size [%d] is not match setting size [%d]", inputs.size(), inputs_.size());
+              "Inpus size [%zu] is not match setting size [%zu]", inputs.size(), inputs_.size());
     return HB_DNN_INVALID_ARGUMENT;
   }
 
@@ -60,7 +60,7 @@ int32_t ModelRoiInferTask::SetInputs(
   for (size_t i{0U}; i < input_size; ++i) {
     if (!inputs[i]) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-                "Set Inputs[%d] failed", i);
+                "Set Inputs[%zu] failed", i);
       return HB_DNN_INVALID_ARGUMENT;
     }
     inputs_[i] = inputs[i];
@@ -75,14 +75,14 @@ int32_t ModelRoiInferTask::SetInputTensors(
   size_t const input_size{input_tensors.size()};
   if (input_size != input_tensors_.size()) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-          "input_size[%d] is not equal to input_tensors_ size[%d]", input_size, input_tensors_.size());
+          "input_size[%zu] is not equal to input_tensors_ size[%zu]", input_size, input_tensors_.size());
     return HB_DNN_API_USE_ERROR;
   }
 
   for (size_t i{0U}; i < input_size; ++i) {
     if (input_tensors[i] == nullptr) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-          "input_tensors [%d] is null", i);
+          "input_tensors [%zu] is null", i);
       return HB_DNN_INVALID_ARGUMENT;
     }
     input_tensors_[i] = input_tensors[i];
@@ -117,7 +117,7 @@ int32_t ModelRoiInferTask::ProcessInput() {
           model_->GetInputTensorProperties(input_dnn_tensors_[k].properties, j);
           input_tensors_[k] = std::shared_ptr<DNNTensor>(
               static_cast<DNNTensor *>(&input_dnn_tensors_[k]),
-              [](DNNTensor *const tensor) {});
+              [](DNNTensor *const tensor) {delete tensor;});
         }
 
         std::shared_ptr<CropConfig> input_conf = std::make_shared<CropConfig>();

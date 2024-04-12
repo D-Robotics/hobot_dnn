@@ -328,16 +328,16 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
   int ret = hobot::dnn_node::output_parser::get_tensor_hwc_index(
       tensors[0], &h_index, &w_index, &c_index);
   if (ret != 0 &&
-      fcos_config_.class_names.size() !=
+      static_cast<int32_t>(fcos_config_.class_names.size()) !=
           tensors[0]->properties.alignedShape.dimensionSize[c_index]) {
     RCLCPP_INFO(rclcpp::get_logger("fcos_detection_parser"),
                 "User det_name_list in config file: %s, is not compatible with "
-                "this model, %d  %d",
+                "this model, %zu  %d",
                 fcos_config_.det_name_list.c_str(),
                 fcos_config_.class_names.size(),
                 tensors[0]->properties.alignedShape.dimensionSize[c_index]);
   }
-  for (int i = 0; i < tensors.size(); i++) {
+  for (size_t i = 0; i < tensors.size(); i++) {
     if (!tensors[i]) {
       RCLCPP_INFO(rclcpp::get_logger("fcos_example"),
                   "tensor layout null, error.");

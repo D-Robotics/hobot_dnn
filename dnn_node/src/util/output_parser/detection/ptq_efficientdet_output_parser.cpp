@@ -96,7 +96,8 @@ EfficientDetConfig default_efficient_det_config = {
      "oven",          "toaster",      "sink",
      "refrigerator",  "book",         "clock",
      "vase",          "scissors",     "teddy bear",
-     "hair drier",    "toothbrush"}};
+     "hair drier",    "toothbrush"},
+     {}};
 
 /**
  * Post process
@@ -150,7 +151,7 @@ int LoadDequantiFile(const std::string &dequanti_file) {
     return -1;
   }
   for (int i = 0; i < 10; i++) {
-    for (int j = 0; j < efficient_det_config_.scales[i].size(); j++) {
+    for (int j = 0; j < static_cast<int>(efficient_det_config_.scales[i].size()); j++) {
       infile >> efficient_det_config_.scales[i][j];
     }
   }
@@ -315,7 +316,7 @@ int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
   int32_t b_wnum = shape[w_idx];
   int32_t b_cnum = shape[c_idx];
 
-  assert(anchor_num_per_pixel == b_cnum / 4);
+  assert(anchor_num_per_pixel == static_cast<uint32_t>(b_cnum / 4));
   assert(c_batch_size == b_batch_size && c_hnum == b_hnum && c_wnum == b_wnum);
   auto box_num = b_batch_size * b_hnum * b_wnum * anchor_num_per_pixel;
 
@@ -513,7 +514,6 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
 
   for (int i = 0; i < layer_num; i++) {
     std::vector<EDAnchor> &anchors = anchors_table_[i];
-    int anchors_num = anchors.size();
     GetBboxAndScores(tensors[i],
                      tensors[layer_num + i],
                      dets,
@@ -522,7 +522,7 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
                      i);
   }
   yolo5_nms(dets, nms_threshold_, 6000, perception.det, false);
-  if (perception.det.size() > nms_top_k_) {
+  if (static_cast<int>(perception.det.size()) > nms_top_k_) {
     perception.det.resize(nms_top_k_);
   }
 

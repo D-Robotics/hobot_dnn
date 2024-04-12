@@ -64,7 +64,7 @@ int DnnNode::Init() {
     if (static_cast<int>(dnn_node_para_ptr_->bpu_core_ids.size()) !=
         dnn_node_para_ptr_->task_num) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-                   "DnnNodePara of bpu_core_ids size %d should be zero or "
+                   "DnnNodePara of bpu_core_ids size %zu should be zero or "
                    "equal with task_num %d",
                    dnn_node_para_ptr_->bpu_core_ids.size(),
                    dnn_node_para_ptr_->task_num);
