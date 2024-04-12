@@ -1,5 +1,10 @@
 # Changelog for package dnn_node_example
 
+tros_2.3.0rc1 (2024-04-12)
+------------------
+1. 修复未设置`CAM_TYPE`情况下example启动失败的问题。
+
+
 tros_2.3.0 (2024-03-27)
 ------------------
 1. 新增适配ros2 humble零拷贝。

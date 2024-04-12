@@ -82,31 +82,6 @@ def generate_launch_description():
         camera_type_mipi = False
         camera_device_arg = usb_cam_device_arg
 
-    elif camera_type == "mipi":
-        # mipi cam图片发布pkg
-        mipi_cam_device_arg = DeclareLaunchArgument(
-            'device',
-            default_value='F37',
-            description='mipi camera device')
-        mipi_node = IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(
-                    get_package_share_directory('mipi_cam'),
-                    'launch/mipi_cam.launch.py')),
-            launch_arguments={
-                'mipi_image_width': LaunchConfiguration('dnn_example_image_width'),
-                'mipi_image_height': LaunchConfiguration('dnn_example_image_height'),
-                'mipi_io_method': 'shared_mem',
-                'mipi_frame_ts_type': 'realtime',
-                'mipi_video_device': LaunchConfiguration('device')
-            }.items()
-        )
-
-        print("using mipi cam")
-        cam_node = mipi_node
-        camera_type_mipi = True
-        camera_device_arg = mipi_cam_device_arg
-    
     elif camera_type == "fb":
         # 本地图片发布
         feedback_picture_arg = DeclareLaunchArgument(
@@ -133,10 +108,33 @@ def generate_launch_description():
         camera_device_arg = feedback_picture_arg
 
     else:
-        print("invalid camera_type ", camera_type,
-              ", which is set with export CAM_TYPE=usb/mipi/fb, using default mipi cam")
+        if camera_type == "mipi":
+            print("using mipi cam")
+        else:
+            print("invalid camera_type ", camera_type,
+                ", which is set with export CAM_TYPE=usb/mipi/fb, using default mipi cam")
+        # mipi cam图片发布pkg
+        mipi_cam_device_arg = DeclareLaunchArgument(
+            'device',
+            default_value='F37',
+            description='mipi camera device')
+        mipi_node = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(
+                    get_package_share_directory('mipi_cam'),
+                    'launch/mipi_cam.launch.py')),
+            launch_arguments={
+                'mipi_image_width': LaunchConfiguration('dnn_example_image_width'),
+                'mipi_image_height': LaunchConfiguration('dnn_example_image_height'),
+                'mipi_io_method': 'shared_mem',
+                'mipi_frame_ts_type': 'realtime',
+                'mipi_video_device': LaunchConfiguration('device')
+            }.items()
+        )
+
         cam_node = mipi_node
         camera_type_mipi = True
+        camera_device_arg = mipi_cam_device_arg
 
     # jpeg图片编码&发布pkg
     jpeg_codec_node = IncludeLaunchDescription(
