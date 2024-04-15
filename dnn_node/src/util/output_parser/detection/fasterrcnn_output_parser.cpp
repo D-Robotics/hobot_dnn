@@ -65,7 +65,7 @@ int32_t Parse(
     std::shared_ptr<LandmarksResult> &output_body_kps) {
   outputs.resize(node_output->output_tensors.size());
   for (const auto &idx : box_outputs_index) {
-    if (idx >= node_output->output_tensors.size()) {
+    if (idx >= static_cast<int32_t>(node_output->output_tensors.size())) {
       return -1;
     }
     if (ParseTensorRect(
@@ -74,9 +74,9 @@ int32_t Parse(
     }
   }
   if (kps_output_index > 0 &&
-      kps_output_index < node_output->output_tensors.size() &&
+      kps_output_index < static_cast<int32_t>(node_output->output_tensors.size()) &&
       body_box_output_index > 0 &&
-      body_box_output_index < node_output->output_tensors.size()) {
+      body_box_output_index < static_cast<int32_t>(node_output->output_tensors.size())) {
     if (ParseTensorKps(node_output->output_tensors.at(kps_output_index),
                        parser_para_,
                        outputs.at(body_box_output_index),
@@ -159,7 +159,7 @@ int ParseTensorKps(const std::shared_ptr<DNNTensor> &output_tensor,
     return -1;
   }
   RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
-              "out box size: %d",
+              "out box size: %zu",
               output_body_rect->boxes.size());
   size_t body_box_num = output_body_rect->boxes.size();
 
@@ -257,7 +257,7 @@ int ParseTensorKps(const std::shared_ptr<DNNTensor> &output_tensor,
   }
 
   RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
-              "Kps size: %d",
+              "Kps size: %zu",
               output_body_kps->values.size());
   RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
               "FasterRcnnKpsOutputParser parse done");

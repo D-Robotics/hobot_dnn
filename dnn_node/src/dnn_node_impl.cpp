@@ -95,13 +95,13 @@ int DnnNodeImpl::ModelInit() {
   const auto &model_name = dnn_node_para_ptr_->model_name;
   if (model_name.empty()) {
     // 2.1 用户没有指定模型名
-    if (dnn_rt_para_->models_load.size() == 1) {
+    if (static_cast<int>(dnn_rt_para_->models_load.size()) == 1) {
       // 2.1.1 模型文件中只有一个模型，直接使用
       dnn_rt_para_->model_manage = dnn_rt_para_->models_load.at(0);
     } else {
       // 2.1.2 模型文件中有多个模型，用户必须指定需要加载的模型
       RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-                   "Model file: %s has %d models, please set model_name para "
+                   "Model file: %s has %zu models, please set model_name para "
                    "in DnnNodePara with SetNodePara API",
                    dnn_node_para_ptr_->model_file.c_str(),
                    dnn_rt_para_->models_load.size());
@@ -193,7 +193,7 @@ int DnnNodeImpl::TaskInit() {
       static_cast<int>(dnn_node_para_ptr_->bpu_core_ids.size()) !=
           dnn_node_para_ptr_->task_num) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-                 "DnnNodePara of bpu_core_ids size %d should be zero or equal "
+                 "DnnNodePara of bpu_core_ids size %zu should be zero or equal "
                  "with task_num %d",
                  dnn_node_para_ptr_->bpu_core_ids.size(),
                  dnn_node_para_ptr_->task_num);
@@ -592,7 +592,7 @@ int DnnNodeImpl::ReleaseTask(const TaskId &task_id) {
   dnn_rt_para_->task_cv.notify_one();
   lg.unlock();
   RCLCPP_DEBUG(rclcpp::get_logger("dnn"),
-               "idle_tasks size: %d, running_tasks size: %d",
+               "idle_tasks size: %zu, running_tasks size: %zu",
                dnn_rt_para_->idle_tasks.size(),
                dnn_rt_para_->running_tasks.size());
   return 0;
