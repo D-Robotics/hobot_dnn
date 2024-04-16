@@ -141,7 +141,7 @@ int32_t ModelInferTask::ProcessInput() {
             1;
         input_tensors_[i] = std::shared_ptr<DNNTensor>(
             static_cast<DNNTensor *>(&input_dnn_tensors_[i]),
-            [](DNNTensor const *const tensor) {delete tensor;});
+            [](DNNTensor const *const tensor) {});
       }
 
       std::shared_ptr<CropConfig> input_conf = std::make_shared<CropConfig>();

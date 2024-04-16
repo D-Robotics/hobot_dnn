@@ -117,7 +117,7 @@ int32_t ModelRoiInferTask::ProcessInput() {
           model_->GetInputTensorProperties(input_dnn_tensors_[k].properties, j);
           input_tensors_[k] = std::shared_ptr<DNNTensor>(
               static_cast<DNNTensor *>(&input_dnn_tensors_[k]),
-              [](DNNTensor *const tensor) {delete tensor;});
+              [](DNNTensor *const tensor) {});
         }
 
         std::shared_ptr<CropConfig> input_conf = std::make_shared<CropConfig>();
