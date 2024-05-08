@@ -37,6 +37,11 @@ inline size_t argmax(ForwardIterator first, ForwardIterator last) {
   return std::distance(first, std::max_element(first, last));
 }
 
+#define BSWAP_32(x) static_cast<int32_t>(__builtin_bswap32(x))
+
+#define r_int32(x, big_endian) \
+  (big_endian) ? BSWAP_32((x)) : static_cast<int32_t>((x))
+
 /**
  * Config definition for Yolo2
  */
@@ -97,6 +102,9 @@ PTQYolo2Config default_ptq_yolo2_config = {
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                 Perception &perception);
 
+int PostProcessQuantiSCALE(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
+                Perception &perception);
+                
 PTQYolo2Config yolo2_config_ = default_ptq_yolo2_config;
 float score_threshold_ = 0.3;
 float nms_threshold_ = 0.45;
@@ -148,7 +156,7 @@ int InitAnchorsTables(const std::vector<std::vector<double>> &anchors_tables){
   for (size_t i = 0; i < anchors_tables.size(); i++){
     if(anchors_tables[i].size() != 2){
       RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
-                  "anchors_tables[%d] size is not equal to 2", i);
+                  "anchors_tables[%zu] size is not equal to 2", i);
       return -1;
     }
     std::pair<double, double> table;
@@ -216,7 +224,17 @@ int32_t Parse(
     result = std::make_shared<DnnParserResult>();
   }
 
-  int ret = PostProcess(node_output->output_tensors, result->perception);
+  auto quanti_type = node_output->output_tensors[0]->properties.quantiType;
+  int ret = 0;
+  if (quanti_type == hbDNNQuantiType::SCALE) {
+    ret = PostProcessQuantiSCALE(node_output->output_tensors, result->perception);
+  } else if (quanti_type == hbDNNQuantiType::NONE) {
+    ret = PostProcess(node_output->output_tensors, result->perception);
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+            "error quanti_type: %d", quanti_type);
+    return -1;
+  }
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("Yolo2_detection_parser"),
                 "postprocess return error, code = %d",
@@ -299,6 +317,92 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
     }
   }
 
+  nms(dets, nms_threshold_, nms_top_k_, perception.det, false);
+  return 0;
+}
+
+float DequantiScale(int32_t data,
+                    bool big_endian,
+                    float &scale_value) {
+  return static_cast<float>(r_int32(data, big_endian)) * scale_value;
+}
+
+int PostProcessQuantiSCALE(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                          Perception &perception) {
+  perception.type = Perception::DET;
+  hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
+  int32_t *data = reinterpret_cast<int32_t *>(tensors[0]->sysMem[0].virAddr);
+
+  float *scale = tensors[0]->properties.scale.scaleData;
+
+  auto &anchors_table = yolo2_config_.anchors_table;
+  int num_classes = yolo2_config_.class_num;
+  float stride = static_cast<float>(yolo2_config_.stride);
+  int num_pred = num_classes + 4 + 1;
+  std::vector<Detection> dets;
+  std::vector<float> class_pred(num_classes, 0.0);
+
+  int height = tensors[0]->properties.validShape.dimensionSize[1];
+  int width = tensors[0]->properties.validShape.dimensionSize[2];
+  int channel_valid = tensors[0]->properties.validShape.dimensionSize[3];
+  int channel_aligned = tensors[0]->properties.alignedShape.dimensionSize[3];
+
+  for (uint32_t h = 0; h < height; h++) {
+    for (uint32_t w = 0; w < width; w++) {
+      for (int k = 0; k < anchors_table.size(); k++) {
+        double anchor_x = anchors_table[k].first;
+        double anchor_y = anchors_table[k].second;
+
+        int32_t *cur_data = data + k * num_pred;
+        float *cur_scale = scale + k * num_pred;
+        float objness = DequantiScale(cur_data[4], false, cur_scale[4]);
+
+        for (int index = 0; index < num_classes; ++index) {
+          class_pred[index] =
+              DequantiScale(cur_data[5 + index], false, cur_scale[5 + index]);
+        }
+
+        float id = argmax(class_pred.begin(), class_pred.end());
+
+        float confidence = (1.f / (1 + std::exp(-objness))) *
+                           (1.f / (1 + std::exp(-class_pred[id])));
+
+        if (confidence < score_threshold_) {
+          continue;
+        }
+
+        float center_x = DequantiScale(cur_data[0], false, cur_scale[0]);
+        float center_y = DequantiScale(cur_data[1], false, cur_scale[1]);
+        float scale_x = DequantiScale(cur_data[2], false, cur_scale[2]);
+        float scale_y = DequantiScale(cur_data[3], false, cur_scale[3]);
+
+        double box_center_x =
+            ((1.0 / (1.0 + std::exp(-center_x))) + w) * stride;
+        double box_center_y =
+            ((1.0 / (1.0 + std::exp(-center_y))) + h) * stride;
+
+        double box_scale_x = std::exp(scale_x) * anchor_x * stride;
+        double box_scale_y = std::exp(scale_y) * anchor_y * stride;
+
+        double xmin = (box_center_x - box_scale_x / 2.0);
+        double ymin = (box_center_y - box_scale_y / 2.0);
+        double xmax = (box_center_x + box_scale_x / 2.0);
+        double ymax = (box_center_y + box_scale_y / 2.0);
+
+        if (xmin > xmax || ymin > ymax) {
+          continue;
+        }
+
+        Bbox bbox(xmin, ymin, xmax, ymax);
+        dets.emplace_back(
+            Detection((int)id,
+                      confidence,
+                      bbox,
+                      yolo2_config_.class_names[(int)id].c_str()));
+      }
+      data = data + channel_aligned;
+    }
+  }
   nms(dets, nms_threshold_, nms_top_k_, perception.det, false);
   return 0;
 }

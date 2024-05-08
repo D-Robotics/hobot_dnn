@@ -83,6 +83,10 @@ class Workflow : public DnnNode
   std::string model_file_name_ = "config/Rdkultra/mobilenetv1_224x224_nv12_pyramid.bin";
   std::string model_name_ = "";
   #endif
+  #ifdef PLATFORM_X5
+  std::string model_file_name_ = "config/X5/mobilenetv1_224x224_nv12.bin";
+  std::string model_name_ = "";
+  #endif
   #ifdef PLATFORM_X86
   std::string model_file_name_ = "config/X3/mobilenetv1_224x224_nv12_pyramid.bin";
   std::string model_name_ = "";

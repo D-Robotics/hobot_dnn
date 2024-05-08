@@ -103,6 +103,8 @@ int Model::PrintModelInfo(std::stringstream &ss) {
         ss << "Layout: NHWC";
       } else if (tensor_properties.tensorLayout == HB_DNN_LAYOUT_NCHW) {
         ss << "Layout: NCHW";
+      } else if (tensor_properties.tensorLayout == HB_DNN_LAYOUT_NONE) {
+        ss << "Layout: NONE";
       }
       ss << ", Shape: [";
       for (int j = 0; j < 4; j++) {

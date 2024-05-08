@@ -1,0 +1,12 @@
+{
+	"model_file": "/opt/hobot/model/x5/basic/yolov3_vargdarknet_416x416_nv12.bin",
+	"dnn_Parser": "yolov3",
+	"model_output_count": 3,
+	"class_num": 80,
+	"cls_names_list": "config/coco.list",
+	"strides": [32, 16, 8],
+	"anchors_table": [[[3.625, 2.8125], [4.875, 6.1875], [11.65625, 10.1875]], [[1.875, 3.8125], [3.875, 2.8125], [3.6875, 7.4375]], [[1.25, 1.625], [2.0, 3.75], [4.125, 2.875]]],
+	"score_threshold":  0.3,
+	"nms_threshold": 0.45,
+	"nms_top_k": 500
+}

@@ -30,6 +30,10 @@ int get_tensor_hwc_index(std::shared_ptr<DNNTensor> tensor,
     *c_index = 1;
     *h_index = 2;
     *w_index = 3;
+  } else if (tensor->properties.tensorLayout == HB_DNN_LAYOUT_NONE) {
+    *c_index = 1;
+    *h_index = 2;
+    *w_index = 3;
   } else {
     return -1;
   }

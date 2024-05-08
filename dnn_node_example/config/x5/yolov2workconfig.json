@@ -1,0 +1,12 @@
+{
+	"model_file": "/opt/hobot/model/x5/basic/yolov2_darknet19_608x608_nv12.bin",
+	"dnn_Parser": "yolov2",
+	"model_output_count": 1,
+	"class_num": 80,
+	"cls_names_list": "config/coco.list",
+	"stride": 32,
+	"anchors_table": [[0.57273, 0.677385], [1.87446, 2.06253], [3.33843, 5.47434], [7.88282, 3.52778], [9.77052, 9.16828]],
+	"score_threshold": 0.35,
+	"nms_threshold": 0.45,
+	"nms_top_k": 500
+}

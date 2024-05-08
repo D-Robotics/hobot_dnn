@@ -92,7 +92,7 @@ int ParseTensorRect(const std::shared_ptr<DNNTensor> &output_tensor,
                     std::shared_ptr<Filter2DResult> &output,
                     int32_t branch_idx) {
   if (!output) {
-    RCLCPP_INFO(rclcpp::get_logger("FaceHandDetectionOutputParser"),
+    RCLCPP_ERROR(rclcpp::get_logger("fasterrcnn_parser"),
                 "Invalid output");
     output = std::make_shared<Filter2DResult>();
   }

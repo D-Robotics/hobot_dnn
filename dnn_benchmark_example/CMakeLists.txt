@@ -50,6 +50,10 @@ elseif(PLATFORM_Rdkultra)
   message("build platform Rdkultra")
   add_definitions(-DPLATFORM_Rdkultra)
   set(PREFIX_PATH rdkultra)
+elseif(PLATFORM_X5)
+  message("build platform Rdkultra")
+  add_definitions(-DPLATFORM_X5)
+  set(PREFIX_PATH x5)
 elseif(PLATFORM_X86)
   message("build platform x86")
   add_definitions(-DPLATFORM_X86)
@@ -81,6 +85,7 @@ include_directories(
 
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
+  ${SYS_ROOT}/usr/lib/hbmedia/
   ${SYS_ROOT}/usr/lib/
 )
 
