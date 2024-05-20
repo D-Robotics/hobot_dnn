@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_2.3.0rc2 (2024-05-20)
+------------------
+1. 修复dnn_node模型输出Tensor内存申请异常的问题。
+
 tros_2.3.0 (2024-03-27)
 ------------------
 1. 新增中英双语Readme。

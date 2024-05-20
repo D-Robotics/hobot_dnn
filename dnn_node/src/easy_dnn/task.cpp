@@ -41,7 +41,6 @@ std::shared_ptr<DNNTensor> Task::AllocateTensor(
 
     hbSysMem *mem = new hbSysMem;
     hbSysAllocCachedMem(mem, out_aligned_size);
-    memset(mem->virAddr, 0, out_aligned_size);
 
     tensor->properties = tensor_properties;
     tensor->sysMem[0] = *mem;
@@ -50,6 +49,7 @@ std::shared_ptr<DNNTensor> Task::AllocateTensor(
                                       [mem](DNNTensor *tensor) {
                                         hbSysFreeMem(&(tensor->sysMem[0]));
                                         delete tensor;
+					delete mem;
                                       });
 }
 
