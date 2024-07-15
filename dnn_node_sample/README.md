@@ -15,7 +15,7 @@ The image data comes from subscribed image data messages, supporting image data 
 - Programming Language: C/C++
 - Development Platform: X3/X86
 - System Version: Ubuntu 20.04/Ubuntu 22.04
-- Compiler Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
+- Compiler Toolchain: Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 # Compilation
 
@@ -46,7 +46,7 @@ Compilation dependencies and package functionalities can be controlled through c
 
 - Compilation command:
 
-```shell```shell
+```shell
 export TARGET_ARCH=aarch64
 export TARGET_TRIPLE=aarch64-linux-gnu
 export CROSS_COMPILE=/usr/bin/$TARGET_TRIPLE-
@@ -95,7 +95,8 @@ export CAM_TYPE=usb
 ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
-**Injecting Local Images**```shell
+**Injecting Local Images**
+```shell
 # Setup TogetherROS environment
 source /opt/tros/setup.bash
 
@@ -135,7 +136,7 @@ root@ubuntu:~# ros2 launch dnn_node_sample dnn_node_sample.launch.py
 
 Log Output:
 
-```text
+```shell
 [INFO] [launch]: All log files can be found below /root/.ros/log/2022-09-20-12-47-57-043477-ubuntu-4390
 [INFO] [launch]: Default logging verbosity is set to INFO
 camera_type is  fb
@@ -156,6 +157,7 @@ webserver has launch
 [dnn_node_sample-3] [WARN] [1663649282.217524812] [dnn_node_sample]: input fps: 10.00, out fps: 9.97, infer time ms: 71, post process time ms: 74
 [dnn_node_sample-3] [WARN] [1663649283.318315410] [dnn_node_sample]: input fps: 10.00, out fps: 10.00, infer time ms: 71, post process time ms: 74
 [dnn_node_sample-3] [WARN] [1663649284.320494664] [dnn_node_sample]: input fps: 10.00, out fps: 9.99, infer time ms: 72, post process time ms: 76
+```
 
 The log shows that both the frame rates of subscribing image messages and publishing AI messages are around 10fps, with the algorithm taking about 70 milliseconds for single-frame inference and about 78 milliseconds for output parsing.
 

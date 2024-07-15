@@ -1,4 +1,4 @@
-# Copyright (c) 2022，Horizon Robotics.
+# Copyright (c) 2024，Horizon Robotics.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,6 +49,10 @@ elseif(PLATFORM_Rdkultra)
   message("build platform Rdkultra")
   add_definitions(-DPLATFORM_Rdkultra)
   set(PREFIX_PATH rdkultra)
+elseif(PLATFORM_X5)
+  message("build platform X5")
+  add_definitions(-DPLATFORM_X5)
+  set(PREFIX_PATH x5)
 elseif(PLATFORM_X86)
   message("build platform x86")
   add_definitions(-DPLATFORM_X86)
@@ -141,13 +145,44 @@ elseif(PLATFORM_Rdkultra)
     src/easy_dnn/model_roi_infer_task.cpp
     src/easy_dnn/task.cpp
   )
-
   target_link_libraries(${PROJECT_NAME}
     opencv_world
     alog
     dnn
     cnn_intf
     ion
+    hbrt_bayes_aarch64
+  )
+elseif(PLATFORM_X5)
+  add_library(${PROJECT_NAME} SHARED
+    src/dnn_node.cpp
+    src/dnn_node_impl.cpp
+    src/util/image_proc.cpp
+    src/util/output_parser/detection/nms.cpp
+    src/util/output_parser/utils.cpp
+    src/util/threads/threadpool.cpp
+    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
+    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
+    src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/util/output_parser/detection/fcos_output_parser.cpp
+    src/util/output_parser/classification/ptq_classification_output_parser.cpp
+    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/easy_dnn/input_process.cpp
+    src/easy_dnn/model.cpp
+    src/easy_dnn/model_infer_task.cpp
+    src/easy_dnn/model_roi_infer_task.cpp
+    src/easy_dnn/task.cpp
+  )
+  target_link_libraries(${PROJECT_NAME}
+    opencv_world
+    alog
+    gflags
+    dnn
+    cnn_intf
     hbrt_bayes_aarch64
   )
 elseif(PLATFORM_X86)

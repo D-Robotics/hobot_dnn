@@ -35,6 +35,23 @@ std::shared_ptr<DNNTensor> Task::AllocateTensor(
 
     // 获取模型输出尺寸
     int out_aligned_size = 4;
+    switch (tensor_properties.tensorType)
+    {
+      case HB_DNN_TENSOR_TYPE_S8:
+      case HB_DNN_TENSOR_TYPE_U8: out_aligned_size = 1; break;
+      case HB_DNN_TENSOR_TYPE_F16:
+      case HB_DNN_TENSOR_TYPE_S16: 
+      case HB_DNN_TENSOR_TYPE_U16: out_aligned_size = 2; break;
+      case HB_DNN_TENSOR_TYPE_F32:
+      case HB_DNN_TENSOR_TYPE_S32:
+      case HB_DNN_TENSOR_TYPE_U32: out_aligned_size = 4; break;
+      case HB_DNN_TENSOR_TYPE_F64:
+      case HB_DNN_TENSOR_TYPE_S64: 
+      case HB_DNN_TENSOR_TYPE_U64: out_aligned_size = 8; break;
+      default: std::cout << "Tensor Type " 
+        << tensor_properties.tensorType << " is not support" << std::endl; break;
+    }
+
     for (int j = 0; j < tensor_properties.alignedShape.numDimensions; j++) {
         out_aligned_size *= tensor_properties.alignedShape.dimensionSize[j];
     }
@@ -49,7 +66,7 @@ std::shared_ptr<DNNTensor> Task::AllocateTensor(
                                       [mem](DNNTensor *tensor) {
                                         hbSysFreeMem(&(tensor->sysMem[0]));
                                         delete tensor;
-					delete mem;
+                                        delete mem;
                                       });
 }
 

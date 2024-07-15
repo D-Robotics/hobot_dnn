@@ -1,0 +1,5 @@
+{
+	"model_file": "/opt/hobot/model/x5/basic/deeplabv3plus_efficientnetm2_1024x2048_nv12.bin",
+	"dnn_Parser": "unet",
+	"model_output_count": 1
+}

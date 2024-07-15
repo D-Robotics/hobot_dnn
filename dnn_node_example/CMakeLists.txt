@@ -1,4 +1,4 @@
-# Copyright (c) 2022，Horizon Robotics.
+# Copyright (c) 2024，Horizon Robotics.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,10 +63,14 @@ elseif(PLATFORM_Rdkultra)
   message("build platform Rdkultra")
   add_definitions(-DPLATFORM_Rdkultra)
   set(PREFIX_PATH rdkultra)
+elseif(PLATFORM_X5)
+  message("build platform X5")
+  add_definitions(-DPLATFORM_X5)
+  set(PREFIX_PATH x5)
 elseif(PLATFORM_X86)
   message("build platform x86")
   add_definitions(-DPLATFORM_X86)
-  set(PREFIX_PATH x86)
+  set(PREFIX_PATH x3)
   set(SYS_ROOT ${THIRD_PARTY})
 else()
   if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
@@ -76,7 +80,7 @@ else()
   elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
     message("build platform X86")
     add_definitions(-DPLATFORM_X86)
-    set(PREFIX_PATH x86)
+    set(PREFIX_PATH x3)
     set(SYS_ROOT ${THIRD_PARTY})
   endif()
 endif()
@@ -136,21 +140,14 @@ install(DIRECTORY
   ${PROJECT_SOURCE_DIR}/launch/
   DESTINATION share/${PROJECT_NAME}/launch)
 
-if(PLATFORM_X3)
-  install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/config/x3/
-    DESTINATION lib/${PROJECT_NAME}/config/
-  )
-elseif(PLATFORM_Rdkultra)
-  install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/config/rdkultra/
-    DESTINATION lib/${PROJECT_NAME}/config/
-  )
-elseif(PLATFORM_X86)
-  install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/config/x3/
-    DESTINATION lib/${PROJECT_NAME}/config/
-  )
-endif()
+install(DIRECTORY
+  ${PROJECT_SOURCE_DIR}/config/${PREFIX_PATH}/
+  DESTINATION lib/${PROJECT_NAME}/config/
+)
+
+install(DIRECTORY
+  ${PROJECT_SOURCE_DIR}/config/common/
+  DESTINATION lib/${PROJECT_NAME}/config/
+)
 
 ament_package()

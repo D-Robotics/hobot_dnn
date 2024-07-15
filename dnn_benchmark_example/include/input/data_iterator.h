@@ -89,6 +89,10 @@ class DataIterator {
   int model_input_width_ = 224;
   int model_input_height_ = 224;
   #endif
+  #ifdef PLATFORM_X5
+  int model_input_width_ = 224;
+  int model_input_height_ = 224;
+  #endif
   #ifdef PLATFORM_X86
   int model_input_width_ = 224;
   int model_input_height_ = 224;

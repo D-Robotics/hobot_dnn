@@ -7,13 +7,15 @@ Dnn Benchmark example package is a performance evaluation example of Dnn Node pa
 # Development Environment
 
 - Programming Language: C/C++
-- Development Platform: X3/X86
+- Development Platform: X3/Rdkultra/X5/X86
 - System Version: Ubuntu 20.04/Ubuntu 22.04
-- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
+- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 # Compilation
 
 - X3 Version: Supports compilation on the X3 Ubuntu system and cross-compilation using Docker on the PC.
+- Rdkultra Version: Supports compilation on the Rdkultra Ubuntu system and cross-compilation using Docker on the PC.
+- X5 Version: Supports compilation on the X5 Ubuntu system and cross-compilation using Docker on the PC.
 - X86 Version: Supports compilation on the X86 Ubuntu system.
 Both support controlling the dependencies and functions of the compiled pkg through compilation options.
 

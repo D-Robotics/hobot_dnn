@@ -35,6 +35,8 @@ namespace dnn_node {
 #define ALIGN_16(w) ALIGNED_2E(w, 16U)
 #define ALIGN_64(w) ALIGNED_2E(w, 64U)
 
+enum class ImageType { BGR = 0, RGB = 1};
+
 class ImageProc {
  public:
   // 使用nv12编码格式图片数据生成NV12PyramidInput
@@ -117,7 +119,75 @@ class ImageProc {
       int scaled_img_height,
       int scaled_img_width);
 
+  // 从BGR格式的图像数据生成DNNTensor
+  // 如果输入图片size小于scale size（模型输入size）：将输入图片padding到左上区域
+  // 如果输入图片size大于scale size（模型输入size）：crop输入图片左上区域
+  // - 参数
+  //   - [in] in_img_data 图像数据的指针
+  //   - [in] in_img_height 输入图像的高度
+  //   - [in] in_img_width 输入图像的宽度
+  //   - [in] scaled_img_height 模型输入的高度
+  //   - [in] scaled_img_width 模型输入的宽度
+  //   - [in] tensor_properties DNNTensor的属性
+  // - 返回值
+  //   - DNNTensor类型的指针，包含BGR格式的图像数据
+  static std::shared_ptr<DNNTensor> GetBGRTensorFromBGRImg(
+        const char *in_img_data,
+        const int &in_img_height,
+        const int &in_img_width,
+        const int &scaled_img_height,
+        const int &scaled_img_width,
+        hbDNNTensorProperties &tensor_properties);
+
+  // 从BGR格式的图像数据生成DNNTensor
+  // 如果输入图片size小于scale size（模型输入size）：将输入图片padding到左上区域
+  // 如果输入图片size大于scale size（模型输入size）：crop输入图片左上区域
+  // - 参数
+  //   - [in] bgr_mat_tmp 图像数据的cv::Mat类
+  //   - [in] scaled_img_height 模型输入的高度
+  //   - [in] scaled_img_width 模型输入的宽度
+  //   - [in] tensor_properties DNNTensor的属性
+  //   - [inout] ratio 获取的变化比例
+  //   - [in] image_type BGR, RGB
+  // - 返回值
+  //   - DNNTensor类型的指针，包含BGR格式的图像数据
+  static std::shared_ptr<DNNTensor> GetBGRTensorFromBGRImg(
+        const cv::Mat &bgr_mat_tmp, 
+        int scaled_img_height, 
+        int scaled_img_width,
+        hbDNNTensorProperties &tensor_properties,
+        float &ratio,
+        ImageType image_type = ImageType::BGR);
+
+  // 从图像文件中读取数据并生成 DNNTensor
+  // 如果输入图片size小于scale size（模型输入size）：将输入图片padding到左上区域
+  // 如果输入图片size大于scale size（模型输入size）：crop输入图片左上区域
+  // - 参数
+  //   - [in] image_file 图像文件的路径
+  //   - [in] scaled_img_height 模型输入的高度
+  //   - [in] scaled_img_width 模型输入的宽度
+  //   - [in] tensor_properties DNNTensor的属性
+  //   - [inout] ratio 获取的变化比例
+  //   - [in] image_type BGR, RGB
+  //   - [in] is_pad 是否填充边缘,否则Resize
+  //   - [in] is_center_crop 是否把图片居中
+  //   - [in] is_scale 是否归一化
+  // - 返回值
+  //   - DNNTensor类型的指针，包含图像数据
+  static std::shared_ptr<DNNTensor> GetBGRTensorFromBGR(
+        const std::string &image_file,
+        int scaled_img_height,
+        int scaled_img_width,
+        hbDNNTensorProperties &tensor_properties,
+        float &ratio,
+        ImageType image_type = ImageType::BGR,
+        bool is_pad = true,
+        bool is_center_crop = false,
+        bool is_scale = false);
+
   static int32_t BGRToNv12(cv::Mat &bgr_mat, cv::Mat &img_nv12);
+
+  static int32_t Nv12ToBGR(const char *in_img_data, const int &in_img_height, const int &in_img_width, cv::Mat &bgr_mat);
 };
 
 }  // namespace dnn_node
