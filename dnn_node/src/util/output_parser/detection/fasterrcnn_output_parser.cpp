@@ -63,6 +63,9 @@ int32_t Parse(
     int32_t body_box_output_index,
     std::vector<std::shared_ptr<Filter2DResult>> &outputs,
     std::shared_ptr<LandmarksResult> &output_body_kps) {
+  for (size_t i = 0; i < node_output->output_tensors.size(); i++) {
+    hbSysFlushMem(&(node_output->output_tensors[i]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
+  }
   outputs.resize(node_output->output_tensors.size());
   for (const auto &idx : box_outputs_index) {
     if (idx >= static_cast<int32_t>(node_output->output_tensors.size())) {
@@ -92,8 +95,6 @@ int ParseTensorRect(const std::shared_ptr<DNNTensor> &output_tensor,
                     std::shared_ptr<Filter2DResult> &output,
                     int32_t branch_idx) {
   if (!output) {
-    RCLCPP_INFO(rclcpp::get_logger("FaceHandDetectionOutputParser"),
-                "Invalid output");
     output = std::make_shared<Filter2DResult>();
   }
 

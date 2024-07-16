@@ -11,15 +11,17 @@ Dnn Node example package is a usage example of Dnn Node package. By inheriting t
 # Development Environment
 
 - Programming Language: C/C++
-- Development Platform: X3/Rdkultra/X86
+- Development Platform: X3/Rdkultra/X5/X86
 - System Version: Ubuntu 20.04/Ubuntu 22.04
-- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
+- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 # Compilation
 
 - X3 Version: Supports compilation on the X3 Ubuntu system and cross-compilation using Docker on a PC.
 
 - Rdkultra Version: Supports compilation on the Rdkultra Ubuntu system and cross-compilation using Docker on a PC.
+
+- X5 Version: Supports compilation on the X5 Ubuntu system and cross-compilation using Docker on a PC.
 
 - X86 Version: Supports compilation on the X86 Ubuntu system.
 
@@ -78,6 +80,9 @@ hbm_img_msgs is a custom image message format used for image transmission in sha
 
   # RDK Ultra
   bash robot_dev_config/build.sh -p Rdkultra -s dnn_node_example
+  
+  # RDK X5
+  bash robot_dev_config/build.sh -p X5 -s dnn_node_example
   ```
 
 - Shared memory communication method is enabled by default in the compilation options.
@@ -96,8 +101,7 @@ X86 Ubuntu version: ubuntu20.04
   colcon build --packages-select dnn_node_example \
      --merge-install \
      --cmake-force-configure \
-  ``````shell
---cmake-args \
+     --cmake-args \
      --no-warn-unused-cli \
      -DPLATFORM_X86=ON \
      -DTHIRD_PARTY=`pwd`/../sysroot_docker
@@ -132,7 +136,7 @@ The source code contains the **dnn_node_example package**, which can be configur
 
 ## Running
 
-- The models used by dnn_node_example are already installed during tros.b installation. The RDK X3 is installed in `/opt/hobot/model/x3/basic`, and the RDK Ultra is installed in `/opt/hobot/model/rdkultra/basic/` after a successful build. 
+- The models used by dnn_node_example are already installed during tros.b installation. The RDK X3 is installed in `/opt/hobot/model/x3/basic`, the RDK Ultra is installed in `/opt/hobot/model/rdkultra/basic/`, and the RDK X5 is installed in `/opt/hobot/model/x5/basic/` after a successful build. 
 
 - After compilation, copy the generated install path to the Horizon RDK (if compiling on the RDK, skip the copying step) and run the following command.
 
@@ -146,23 +150,17 @@ source ./install/local_setup.bash
 # Copy based on the actual installation path (the installation path in the docker is install/lib/dnn_node_example/config/, the copy command is cp -r install/lib/dnn_node_example/config/ .).
 cp -r install/dnn_node_example/lib/dnn_node_example/config/ .
 
-# Run mode 1:
-```To use the yolov3 model and the yolov3 post-processing algorithm built into dnn_node, configure to perform inference in synchronous mode using a local jpg format image and store the rendered image:
+# Run mode 1:To use the yolov3 model and the yolov3 post-processing algorithm built into dnn_node, configure to perform inference in synchronous mode using a local jpg format image and store the rendered image:
 
-```shell
+
 ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3workconfig.json
-```
 
-# Run mode 2:
-Configure to use the yolov2 model and the yolov2 post-processing algorithm built into dnn_node, perform inference in asynchronous mode using the subscribed image message (topic is /image_raw), and set the log level to warn:
+# Run mode 2:Configure to use the yolov2 model and the yolov2 post-processing algorithm built into dnn_node, perform inference in asynchronous mode using the subscribed image message (topic is /image_raw), and set the log level to warn:
 
-```shell
 ros2 run dnn_node_example example --ros-args -p feed_type:=1 --ros-args --log-level warn -p config_file:=config/yolov2workconfig.json
-```
 
 # Run mode 3: Use shared memory communication method (topic is /hbmem_img) to perform inference in asynchronous mode and set the log level to warn:
 
-```shell
 ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 --ros-args --log-level warn
 ```
 
@@ -201,7 +199,9 @@ cp -r install/lib/dnn_node_example/config/ .
 ./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 --ros-args --log-level warn
 ```
 
-## Run on X86 Ubuntu system:```shell
+## Run on X86 Ubuntu system:
+
+```shell
 export COLCON_CURRENT_PREFIX=./install
 source ./install/setup.bash
 # Copy the model used in the config as an example, adjust based on the actual installation path
@@ -251,17 +251,15 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
   | Model Name                            | Model Type | Platform Support | Model Output Description                 | Rendering Effect                       |
   | -------------------------------------- | ---------- | ---------------- | ---------------------------------------- | --------------------------------------- |
   | yolov2_608x608_nv12                    | Detection Model | x3/x86 | Output objects detected and bounding boxes | ![image](./render/yolov2.jpeg)         |
-``` 
-
-如有任何问题，请随时询问。| yolov3_416x416_nv12                    | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/yolov3.jpeg)        |
-| yolov5_672x672_nv12                    | Detection model | x3 | Output detected objects and bounding boxes | ![image](./render/yolov5.jpeg)        |
-| yolov5x_672x672_nv12                   | Detection model | Rdkultra | Output detected objects and bounding boxes | ![image](./render/yolov5x.jpeg)        |
-| mobilenet_ssd_300x300_nv12             | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/mobilenet_ssd.jpeg) |
-| fcos_512x512_nv12                      | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/fcos.jpeg)          |
-| efficient_det_no_dequanti_512x512_nv12 | Detection model | x3 | Output detected objects and bounding boxes | ![image](./render/efficient_det.jpeg) |
-| multitask_body_kps_960x544.hbm         | Detection model | x3/x86 | Output detected body bounding boxes and human keypoint indices | ![image](./render/body_kps.jpeg)      |
-| mobilenetv2_224x224_nv12.bin           | Classification model | x3/x86 | Output the class result with the highest confidence | ![image](./render/mobilenetv2.jpeg)   |
-| mobilenet_unet_1024x2048_nv12.bin      | Segmentation model | x3/x86 | Semantic segmentation, output image with each pixel corresponding to its class | ![image](./render/unet.jpeg)          |
+  | yolov3_416x416_nv12                    | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/yolov3.jpeg)        |
+  | yolov5_672x672_nv12                    | Detection model | x3 | Output detected objects and bounding boxes | ![image](./render/yolov5.jpeg)        |
+  | yolov5x_672x672_nv12                   | Detection model | Rdkultra | Output detected objects and bounding boxes | ![image](./render/yolov5x.jpeg)        |
+  | mobilenet_ssd_300x300_nv12             | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/mobilenet_ssd.jpeg) |
+  | fcos_512x512_nv12                      | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/fcos.jpeg)          |
+  | efficient_det_no_dequanti_512x512_nv12 | Detection model | x3 | Output detected objects and bounding boxes | ![image](./render/efficient_det.jpeg) |
+  | multitask_body_kps_960x544.hbm         | Detection model | x3/x86 | Output detected body bounding boxes and human keypoint indices | ![image](./render/body_kps.jpeg)      |
+  | mobilenetv2_224x224_nv12.bin           | Classification model | x3/x86 | Output the class result with the highest confidence | ![image](./render/mobilenetv2.jpeg)   |
+  | mobilenet_unet_1024x2048_nv12.bin      | Segmentation model | x3/x86 | Semantic segmentation, output image with each pixel corresponding to its class | ![image](./render/unet.jpeg)          |
 
 "dnn_Parser" setting chooses the built-in post-processing algorithm, currently support configurations include `"yolov2", "yolov3", "yolov5", "yolov5x", "kps_parser", "classification", "ssd", "efficient_det", "fcos", "unet"`.
 "model_output_count" represents the number of model output branches.

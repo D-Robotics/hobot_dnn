@@ -25,6 +25,17 @@ namespace hobot {
 namespace dnn_node {
 namespace parser_yolov3 {
 
+#define BSWAP_32(x) static_cast<int32_t>(__builtin_bswap32(x))
+
+#define r_int32(x, big_endian) \
+  (big_endian) ? BSWAP_32((x)) : static_cast<int32_t>((x))
+
+float DequantiScale(int32_t data,
+                                                      bool big_endian,
+                                                      float &scale_value) {
+  return static_cast<float>(r_int32(data, big_endian)) * scale_value;
+}
+
 /**
  * Finds the greatest element in the range [first, last)
  * @tparam[in] ForwardIterator: iterator type
@@ -108,6 +119,10 @@ void PostProcessNHWC(std::shared_ptr<DNNTensor> tensor,
 void PostProcessNCHW(std::shared_ptr<DNNTensor> tensor,
                      int layer,
                      std::vector<Detection> &dets);
+
+void PostProcessQuantiScaleNHWC(std::shared_ptr<DNNTensor> tensor,
+                                int layer,
+                                std::vector<Detection> &dets);
 
 PTQYolo3DarknetConfig yolo3_config_ = default_ptq_yolo3_darknet_config;
 float score_threshold_ = 0.3;
@@ -285,12 +300,23 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
   perception.type = Perception::DET;
   std::vector<Detection> dets;
   for (size_t i = 0; i < yolo3_config_.strides.size(); i++) {
-    if (tensors[i]->properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {
-      PostProcessNHWC(tensors[i], i, dets);
-    } else if (tensors[i]->properties.tensorLayout == HB_DNN_LAYOUT_NCHW) {
-      PostProcessNCHW(tensors[i], i, dets);
+    auto quanti_type = tensors[i]->properties.quantiType;
+    if (quanti_type == hbDNNQuantiType::NONE) {
+      if (tensors[i]->properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {
+        PostProcessNHWC(tensors[i], i, dets);
+      } else if (tensors[i]->properties.tensorLayout == HB_DNN_LAYOUT_NCHW) {
+        PostProcessNCHW(tensors[i], i, dets);
+      } else {
+        RCLCPP_ERROR(rclcpp::get_logger("dnn_ptq_yolo3"), "tensor layout error.");
+      }
+    } else if (quanti_type == hbDNNQuantiType::SCALE) {
+      if (tensors[i]->properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {
+        PostProcessQuantiScaleNHWC(tensors[i], i, dets);
+      } else {
+        RCLCPP_ERROR(rclcpp::get_logger("dnn_ptq_yolo3"), "tensor layout error.");
+      }
     } else {
-      RCLCPP_WARN(rclcpp::get_logger("dnn_ptq_yolo3"), "tensor layout error.");
+      RCLCPP_ERROR(rclcpp::get_logger("dnn_ptq_yolo3"), "tensor quanti type error.");
     }
   }
   nms(dets, nms_threshold_, nms_top_k_, perception.det, false);
@@ -310,7 +336,6 @@ void PostProcessNHWC(std::shared_ptr<DNNTensor> tensor,
   std::vector<std::pair<double, double>> &anchors =
       yolo3_config_.anchors_table[layer];
 
-  // int *shape = tensor->data_shape.d;
   int height, width;
   auto ret =
       hobot::dnn_node::output_parser::get_tensor_hw(tensor, &height, &width);
@@ -446,6 +471,83 @@ void PostProcessNCHW(std::shared_ptr<DNNTensor> tensor,
                       bbox,
                       yolo3_config_.class_names[static_cast<int>(id)].c_str()));
       }
+    }
+  }
+}
+
+void PostProcessQuantiScaleNHWC(std::shared_ptr<DNNTensor> tensor,
+                                int layer,
+                                std::vector<Detection> &dets) {
+  hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
+  auto *data = reinterpret_cast<int32_t *>(tensor->sysMem[0].virAddr);
+  float *scale = tensor->properties.scale.scaleData;
+  int num_classes = yolo3_config_.class_num;
+  int stride = yolo3_config_.strides[layer];
+  int num_pred = yolo3_config_.class_num + 4 + 1;
+
+  std::vector<float> class_pred(yolo3_config_.class_num, 0.0);
+  std::vector<std::pair<double, double>> &anchors =
+      yolo3_config_.anchors_table[layer];
+
+  int height = tensor->properties.validShape.dimensionSize[1];
+  int width = tensor->properties.validShape.dimensionSize[2];
+
+  int channel_valid = tensor->properties.validShape.dimensionSize[3];
+  int channel_aligned = tensor->properties.alignedShape.dimensionSize[3];
+
+  for (uint32_t h = 0; h < height; h++) {
+    for (uint32_t w = 0; w < width; w++) {
+      for (int k = 0; k < anchors.size(); k++) {
+        double anchor_x = anchors[k].first;
+        double anchor_y = anchors[k].second;
+
+        int32_t *cur_data = data + k * num_pred;
+        float *cur_scale = scale + k * num_pred;
+        float objness = DequantiScale(cur_data[4], false, cur_scale[4]);
+
+        for (int index = 0; index < num_classes; ++index) {
+          class_pred[index] =
+              DequantiScale(cur_data[5 + index], false, cur_scale[5 + index]);
+        }
+
+        float id = argmax(class_pred.begin(), class_pred.end());
+        double x1 = 1 / (1 + std::exp(-objness)) * 1;
+        double x2 = 1 / (1 + std::exp(-class_pred[id]));
+        double confidence = x1 * x2;
+
+        if (confidence < score_threshold_) {
+          continue;
+        }
+
+        float center_x = DequantiScale(cur_data[0], false, cur_scale[0]);
+        float center_y = DequantiScale(cur_data[1], false, cur_scale[1]);
+        float scale_x = DequantiScale(cur_data[2], false, cur_scale[2]);
+        float scale_y = DequantiScale(cur_data[3], false, cur_scale[3]);
+
+        double box_center_x =
+            ((1.0 / (1.0 + std::exp(-center_x))) + w) * stride;
+        double box_center_y =
+            ((1.0 / (1.0 + std::exp(-center_y))) + h) * stride;
+
+        double box_scale_x = std::exp(scale_x) * anchor_x * stride;
+        double box_scale_y = std::exp(scale_y) * anchor_y * stride;
+
+        double xmin = (box_center_x - box_scale_x / 2.0);
+        double ymin = (box_center_y - box_scale_y / 2.0);
+        double xmax = (box_center_x + box_scale_x / 2.0);
+        double ymax = (box_center_y + box_scale_y / 2.0);
+
+        if (xmin > xmax || ymin > ymax) {
+          continue;
+        }
+
+        Bbox bbox(xmin, ymin, xmax, ymax);
+        dets.push_back(Detection((int)id,
+                                 confidence,
+                                 bbox,
+                                 yolo3_config_.class_names[(int)id].c_str()));
+      }
+      data = data + channel_aligned;
     }
   }
 }

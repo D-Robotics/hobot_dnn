@@ -16,10 +16,11 @@
 #include <string>
 #include <vector>
 
+#include "ai_msgs/msg/capture_targets.hpp"
+#include "ai_msgs/msg/perception_targets.hpp"
 #include "cv_bridge/cv_bridge.h"
 #include "dnn_node/dnn_node.h"
 #include "dnn_node/util/image_proc.h"
-#include "include/image_utils.h"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
@@ -27,8 +28,7 @@
 #include "hbm_img_msgs/msg/hbm_msg1080_p.hpp"
 #endif
 
-#include "ai_msgs/msg/capture_targets.hpp"
-#include "ai_msgs/msg/perception_targets.hpp"
+#include "include/image_utils.h"
 
 #ifndef DNN_EXAMPLE_NODE_H_
 #define DNN_EXAMPLE_NODE_H_

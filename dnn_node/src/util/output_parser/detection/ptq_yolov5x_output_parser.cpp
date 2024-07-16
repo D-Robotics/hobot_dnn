@@ -424,10 +424,9 @@ void ParseTensor(std::shared_ptr<DNNTensor> tensor,
       }
     }
   } else {
-    RCLCPP_INFO(rclcpp::get_logger("Yolo5_detection_parser"),
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),
                 "yolov5x unsupport shift dequantzie now!");
   }
-  
 }
 
 int32_t Parse(

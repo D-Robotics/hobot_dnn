@@ -1,7 +1,8 @@
 # Changelog for package dnn_benchmark_example
 
-tros_2.2.2 (2023-12-22)
+tros_2.4.0 (2024-07-15)
 ------------------
+1. 新增x5 dnn适配。
 
 tros_2.1.1 (2023-07-14)
 ------------------

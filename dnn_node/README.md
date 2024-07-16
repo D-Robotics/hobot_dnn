@@ -8,22 +8,24 @@ English| [简体中文](./README_cn.md)
 
 By reading this document, users can utilize models and image data on the Horizon X3 development board to perform model inference using the BPU processor and process the parsed model outputs.
 
-The Dnn Node package is part of the Horizon Robotics robot development platform, based on the Horizon EasyDNN and ROS2 Node for secondary development, providing a simpler and more user-friendly model integration development interface for application development. This includes functions such as model management, input processing and result parsing based on model descriptions, and model output memory allocation management.
+The Dnn Node package is part of the Horizon Robotics robot development platform, based on the Horizon libdnn and ROS2 Node for secondary development, providing a simpler and more user-friendly model integration development interface for application development. This includes functions such as model management, input processing and result parsing based on model descriptions, and model output memory allocation management.
 
 The DnnNode in the Dnn Node package is a virtual base class that defines the data structures and interfaces for model integration development. Users need to inherit the DnnNode class and implement pre- and post-processing as well as configuration interfaces.
 
 # Development Environment
 
 - Programming Language: C/C++
-- Development Platform: X3/Rdkultra/X86
+- Development Platform: X3/Rdkultra/X5/X86
 - System Version: Ubuntu 20.04/Ubuntu 22.04
-- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
+- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 # Compilation
 
 - X3 Version: Supports compilation on X3 Ubuntu system and cross-compilation using Docker on PC.
 
 - Rdkultra Version: Supports compilation on Rdkultra Ubuntu system and cross-compilation using Docker on PC.
+
+- X5 Version: Supports compilation on X5 Ubuntu system and cross-compilation using Docker on PC.
 
 - X86 Version: Supports compilation on X86 Ubuntu system.
 
@@ -36,14 +38,19 @@ Compilation options can control the dependencies and functionalities of compilin
 - dnn: 1.18.4
 - opencv: 3.4.5
 
-### X86 Dependencies
-
-- dnn: 1.12.3
-- opencv: 3.4.5
-
 ### Rdkultra Dependencies
 
 - dnn: 1.17.3
+- opencv: 3.4.5
+
+### X5 Dependencies
+
+- dnn: 1.23.5
+- opencv: 3.4.5
+
+### X86 Dependencies
+
+- dnn: 1.12.3
 - opencv: 3.4.5
 
 ## Compilation on X3/Rdkultra Ubuntu System
@@ -60,7 +67,7 @@ Compilation options can control the dependencies and functionalities of compilin
 
 - Compile the `dnn_node` package: `colcon build --packages-select dnn_node`
 
-## Cross-Compilation for X3/Rdkultra using Docker
+## Cross-Compilation for X3/Rdkultra/X5 using Docker
 
 1. Compilation Environment Confirmation
 
@@ -77,6 +84,9 @@ Compilation options can control the dependencies and functionalities of compilin
 
   # RDK Ultra
   bash robot_dev_config/build.sh -p Rdkultra -s dnn_node
+
+  # RDK X5
+  bash robot_dev_config/build.sh -p X5 -s dnn_node
   ```
 
 ## Compilation on X86 Ubuntu System for X86 Version
@@ -249,15 +259,15 @@ The algorithm models and their corresponding output parsing methods are as follo
 
 | Algorithm Category | Algorithm | Output Parsing Method |
 | ---------------------- | ---------------------- | ----------- |
-| Object Detection | [FCOS](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_FCOS.html) | fcos_output_parser.h |
-| Object Detection | [EfficientNet_Det](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_efficient_det.html) | ptq_efficientdet_output_parser.h |
-| Object Detection | [MobileNet_SSD](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_mobilenet_ssd.html) | ptq_ssd_output_parser.h |
-| Object Detection | [YoloV2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html) | ptq_yolo2_output_parser.h |
-| Object Detection | [YoloV3](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html) | ptq_yolo3_darknet_output_parser.h |
-| Object Detection | [YoloV5](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html) | ptq_yolo5_output_parser.h |
-| Human Detection | [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html) | fasterrcnn_output_parser.h |
-| Image Classification | [mobilenetv2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/classification/mobilenetv2.html) | ptq_classification_output_parser.h |
-| Semantic Segmentation | [mobilenet_unet](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/fragmentation/index.html) | ptq_unet_output_parser.h |
+| Object Detection | [FCOS](https://developer.horizon.cc/documents_tros/boxs/detection/fcos.html) | fcos_output_parser.h |
+| Object Detection | [EfficientNet_Det](https://developer.horizon.cc/documents_tros/boxs/detection/efficientnet.html) | ptq_efficientdet_output_parser.h |
+| Object Detection | [MobileNet_SSD](https://developer.horizon.cc/documents_tros/boxs/detection/mobilenet.html) | ptq_ssd_output_parser.h |
+| Object Detection | [YoloV2](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html) | ptq_yolo2_output_parser.h |
+| Object Detection | [YoloV3](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html) | ptq_yolo3_darknet_output_parser.h |
+| Object Detection | [YoloV5](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html) | ptq_yolo5_output_parser.h |
+| Human Detection | [FasterRcnn](https://developer.horizon.cc/documents_tros/boxs/function/mono2d_body_detection.html) | fasterrcnn_output_parser.h |
+| Image Classification | [mobilenetv2](https://developer.horizon.cc/documents_tros/boxs/classification/mobilenetv2.html) | ptq_classification_output_parser.h |
+| Semantic Segmentation | [mobilenet_unet](https://developer.horizon.cc/documents_tros/boxs/segmentation/mobilenet_unet.html) | ptq_unet_output_parser.h |
 
 In the inference result callback `PostProcess(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output)`, using the built-in parsing method in `hobot_dnn` to parse the output of the `YoloV5` algorithm is shown in the following example:
 

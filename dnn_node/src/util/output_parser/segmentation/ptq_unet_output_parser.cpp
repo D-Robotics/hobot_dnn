@@ -78,7 +78,6 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
                height,
                channel);
 
-  float* data = reinterpret_cast<float*>(tensors[0]->sysMem[0].virAddr);
   perception.seg.data.resize(height * width);
   perception.seg.seg.resize(height * width);
   perception.seg.width = width;
@@ -88,21 +87,38 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
   perception.seg.channel = channel;
   perception.seg.num_classes = num_classes_;
 
-  for (int h = 0; h < height; ++h) {
-    for (int w = 0; w < width; ++w) {
-      float top_score = -1000000.0f;
-      int top_index = 0;
-      float* c_data = data + (width * h + w) * channel;
-      for (int c = 0; c < channel; c++) {
-        if (c_data[c] > top_score) {
-          top_score = c_data[c];
-          top_index = c;
+  if (tensors[0]->properties.tensorType == HB_DNN_TENSOR_TYPE_F32) {
+    float* data = reinterpret_cast<float*>(tensors[0]->sysMem[0].virAddr);
+
+    for (int h = 0; h < height; ++h) {
+      for (int w = 0; w < width; ++w) {
+        float top_score = -1000000.0f;
+        int top_index = 0;
+        float* c_data = data + (width * h + w) * channel;
+        for (int c = 0; c < channel; c++) {
+          if (c_data[c] > top_score) {
+            top_score = c_data[c];
+            top_index = c;
+          }
         }
+        perception.seg.seg[h * width + w] = top_index;
+        perception.seg.data[h * width + w] = static_cast<float>(top_index);
       }
-      perception.seg.seg[h * width + w] = top_index;
-      perception.seg.data[h * width + w] = static_cast<float>(top_index);
+    }
+  } else if (tensors[0]->properties.tensorType == HB_DNN_TENSOR_TYPE_S8) {
+    int8_t *data = reinterpret_cast<int8_t *>(tensors[0]->sysMem[0].virAddr);
+
+    // parsing output data
+    for (int h = 0; h < height; ++h) {
+      for (int w = 0; w < width; ++w) {
+        // the number of channel is 1, mean is category
+        auto top_index = reinterpret_cast<int8_t *>(data + (h * width + w))[0];
+        perception.seg.seg[h * width + w] = top_index;
+        perception.seg.data[h * width + w] = static_cast<float>(top_index);
+      }
     }
   }
+
   return 0;
 }
 

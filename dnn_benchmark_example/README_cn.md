@@ -7,13 +7,14 @@ Dnn Benchmark example package是Dnn Node package的性能评测示例，通过�
 # 开发环境
 
 - 编程语言: C/C++
-- 开发平台: X3/X86
+- 开发平台: X3/Rdkultra/X5/X86
 - 系统版本：Ubuntu 20.04/Ubuntu 22.04
-- 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
+- 编译工具链:Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 # 编译
 
 - X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- X5版本：支持在X5 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 - X86版本：支持在X86 Ubuntu系统上编译一种方式。
 同时支持通过编译选项控制编译pkg的依赖和pkg的功能。
 

@@ -527,6 +527,10 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
     return -1;
   }
 
+#ifdef PLATFORM_X5
+  en_set_task_para_ = false;
+#endif
+
   if (en_set_task_para_) {
     // 允许配置task参数
     hbDNNInferCtrlParam ctrl_param;

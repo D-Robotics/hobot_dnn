@@ -8,22 +8,24 @@ Getting Started with Dnn Node
 
 通过阅读本文档，用户可以在地平线X3开发板上使用模型和图像数据利用BPU处理器进行模型推理，并处理解析后的模型输出。
 
-Dnn Node package是地平线机器人开发平台的一部分，基于地平线EasyDNN和ROS2 Node进行二次开发，为应用开发提供更简单易用的模型集成开发接口，包括模型管理、基于模型描述的输入处理及结果解析，以及模型输出内存分配管理等功能。
+Dnn Node package是地平线机器人开发平台的一部分，基于地平线 libdnn 和ROS2 Node进行二次开发，为应用开发提供更简单易用的模型集成开发接口，包括模型管理、基于模型描述的输入处理及结果解析，以及模型输出内存分配管理等功能。
 
 Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的数据结构和接口，用户需要继承DnnNode类并实现前后处理和配置接口。
 
 # 开发环境
 
 - 编程语言: C/C++
-- 开发平台: X3/Rdkultra/X86
+- 开发平台: X3/Rdkultra/X5/X86
 - 系统版本：Ubuntu 20.04/Ubuntu 22.04
-- 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
+- 编译工具链:Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 # 编译
 
 - X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
 - Rdkultra版本：支持在Rdkultra Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+
+- X5版本：支持在X5 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
 - X86版本：支持在X86 Ubuntu系统上编译一种方式。
 
@@ -36,17 +38,21 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 - dnn:1.18.4
 - opencv:3.4.5
 
-### X86 依赖
-
-- dnn:1.12.3
-- opencv:3.4.5
-
 ### Rdkultra 依赖
 
 - dnn:1.17.3
 - opencv:3.4.5
 
-## X3/Rdkultra Ubuntu系统上编译
+### X5 依赖
+- dnn:1.23.5
+- opencv:3.4.5
+
+### X86 依赖
+
+- dnn:1.12.3
+- opencv:3.4.5
+
+## X3/Rdkultra/X5 Ubuntu系统上编译
 
 1、编译环境确认
 
@@ -77,6 +83,9 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
   # RDK Ultra
   bash robot_dev_config/build.sh -p Rdkultra -s dnn_node
+  
+  # RDK X5
+  bash robot_dev_config/build.sh -p X5 -s dnn_node
   ```
 
 ## X86 Ubuntu系统上编译 X86版本
@@ -252,15 +261,15 @@ perception_common.h为定义的解析后的感知结果数据类型。
 
 | 算法类别       | 算法                 | 算法输出解析方法 |
 | ---------------------- | ---------------------- | ----------- |
-| 目标检测       | [FCOS](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_FCOS.html)           | fcos_output_parser.h         |
-| 目标检测       | [EfficientNet_Det](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_efficient_det.html)           | ptq_efficientdet_output_parser.h         |
-| 目标检测       | [MobileNet_SSD](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_mobilenet_ssd.html)        |   ptq_ssd_output_parser.h       |
-| 目标检测       | [YoloV2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |   ptq_yolo2_output_parser.h       |
-| 目标检测       | [YoloV3](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |    ptq_yolo3_darknet_output_parser.h       |
-| 目标检测       | [YoloV5](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |  ptq_yolo5_output_parser.h        |
-| 人体检测       | [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html)             |  fasterrcnn_output_parser.h       |
-| 图片分类       | [mobilenetv2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/classification/mobilenetv2.html)  |  ptq_classification_output_parser.h        |
-| 语义分割       | [mobilenet_unet](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/fragmentation/index.html)      |  ptq_unet_output_parser.h        |
+| 目标检测       | [FCOS](https://developer.horizon.cc/documents_tros/boxs/detection/fcos.html)           | fcos_output_parser.h         |
+| 目标检测       | [EfficientNet_Det](https://developer.horizon.cc/documents_tros/boxs/detection/efficientnet.html)           | ptq_efficientdet_output_parser.h         |
+| 目标检测       | [MobileNet_SSD](https://developer.horizon.cc/documents_tros/boxs/detection/mobilenet.html)        |   ptq_ssd_output_parser.h       |
+| 目标检测       | [YoloV2](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html)       |   ptq_yolo2_output_parser.h       |
+| 目标检测       | [YoloV3](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html)       |    ptq_yolo3_darknet_output_parser.h       |
+| 目标检测       | [YoloV5](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html)       |  ptq_yolo5_output_parser.h        |
+| 人体检测       | [FasterRcnn](https://developer.horizon.cc/documents_tros/boxs/function/mono2d_body_detection.html)             |  fasterrcnn_output_parser.h       |
+| 图片分类       | [mobilenetv2](https://developer.horizon.cc/documents_tros/boxs/classification/mobilenetv2.html)  |  ptq_classification_output_parser.h        |
+| 语义分割       | [mobilenet_unet](https://developer.horizon.cc/documents_tros/boxs/segmentation/mobilenet_unet.html)      |  ptq_unet_output_parser.h        |
 
 
 在推理结果回调`PostProcess(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output)`中，使用`hobot_dnn`中内置的解析方法解析`YoloV5`算法输出举例：

@@ -13,13 +13,15 @@ Dnn Node example package是Dnn Node package的使用示例，通过继承DnnNode
 - 编程语言: C/C++
 - 开发平台: X3/Rdkultra/X86
 - 系统版本：Ubuntu 20.04/Ubuntu 22.04
-- 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
+- 编译工具链:Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 # 编译
 
 - X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
 - Rdkultra版本：支持在Rdkultra Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+
+- X5版本：支持在X5 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
 - X86版本：支持在X86 Ubuntu系统上编译一种方式。
 
@@ -81,6 +83,9 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
   # RDK Ultra
   bash robot_dev_config/build.sh -p Rdkultra -s dnn_node_example
+
+  # RDK X5
+  bash robot_dev_config/build.sh -p X5 -s dnn_node_example
   ```
 
 - 编译选项中默认打开了shared mem通信方式。
@@ -135,7 +140,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 ## 运行
 
-- dnn_node_example使用到的模型在安装tros.b的时候已经安装，RDK X3安装在`/opt/hobot/model/x3/basic`路径下，RDK Ultra安装在`/opt/hobot/model/rdkultra/basic/`路径下。
+- dnn_node_example使用到的模型在安装tros.b的时候已经安装，RDK X3安装在`/opt/hobot/model/x3/basic`路径下，RDK Ultra安装在`/opt/hobot/model/rdkultra/basic/`路径下，RDK X5安装在`/opt/hobot/model/x5/basic`路径下。
 
 - 编译成功后，将生成的install路径拷贝到地平线RDK上（如果是在RDK上编译，忽略拷贝步骤），并执行如下命令运行。
 
@@ -226,6 +231,21 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
 
 ```
 
+## X5 Ubuntu系统上运行
+
+```shell
+export COLCON_CURRENT_PREFIX=install
+source install/setup.bash
+
+# 使用feedback方式，启动命令中使用参数config_file切换算法
+ros2 launch dnn_node_example dnn_node_example_feedback.launch.py dnn_example_config_file:=config/mobilenetv2workconfig.json dnn_example_image:=config/target_class.jpg 
+
+# 使用MIPI摄像头作为图像数据输入，启动命令中使用参数config_file切换算法
+export CAM_TYPE=mipi
+ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:=config/mobilenetv2workconfig.json
+
+```
+
 ## 注意事项
 
 - config_file配置文件格式为json格式，以yolov5模型配置为例，具体配置如下：
@@ -249,16 +269,16 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
   目前example支持的模型:
   | 模型名称                               | 模型类型 | 平台支持情况 | 模型输出说明                             | 渲染效果                              |
   | -------------------------------------- | -------- | -------- | ---------------------------------------- | ------------------------------------- |
-  | yolov2_608x608_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov2.jpeg)        |
-  | yolov3_416x416_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov3.jpeg)        |
+  | yolov2_608x608_nv12                    | 检测模型 | x3/x5/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov2.jpeg)        |
+  | yolov3_416x416_nv12                    | 检测模型 | x3/x5/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov3.jpeg)        |
   | yolov5_672x672_nv12                    | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/yolov5.jpeg)        |
-  | yolov5x_672x672_nv12                   | 检测模型 | Rdkultra | 输出检测到的物体和检测框                 | ![image](./render/yolov5x.jpeg)        |
-  | mobilenet_ssd_300x300_nv12             | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/mobilenet_ssd.jpeg) |
-  | fcos_512x512_nv12                      | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/fcos.jpeg)          |
+  | yolov5x_672x672_nv12                   | 检测模型 | Rdkultra/x5 | 输出检测到的物体和检测框                 | ![image](./render/yolov5x.jpeg)        |
+  | mobilenet_ssd_300x300_nv12             | 检测模型 | x3/x5/x86 | 输出检测到的物体和检测框                 | ![image](./render/mobilenet_ssd.jpeg) |
+  | fcos_512x512_nv12                      | 检测模型 | x3/x5/x86 | 输出检测到的物体和检测框                 | ![image](./render/fcos.jpeg)          |
   | efficient_det_no_dequanti_512x512_nv12 | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/efficient_det.jpeg) |
-  | multitask_body_kps_960x544.hbm         | 检测模型 | x3/x86 | 输出检测到body检测框和人体kps指标点      | ![image](./render/body_kps.jpeg)      |
-  | mobilenetv2_224x224_nv12.bin           | 分类模型 | x3/x86 | 输出置信度最大的分类结果                 | ![image](./render/mobilenetv2.jpeg)   |
-  | mobilenet_unet_1024x2048_nv12.bin      | 分割模型 | x3/x86 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)          |
+  | multitask_body_kps_960x544.hbm         | 检测模型 | x3/x5/x86 | 输出检测到body检测框和人体kps指标点      | ![image](./render/body_kps.jpeg)      |
+  | mobilenetv2_224x224_nv12.bin           | 分类模型 | x3/x5/x86 | 输出置信度最大的分类结果                 | ![image](./render/mobilenetv2.jpeg)   |
+  | mobilenet_unet_1024x2048_nv12.bin      | 分割模型 | x3/x5/x86 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)          |
 
   "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有`"yolov2","yolov3","yolov5","yolov5x","kps_parser","classification","ssd","efficient_det","fcos","unet"`。
   "model_output_count"为模型输出branch个数。

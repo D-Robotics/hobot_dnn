@@ -22,6 +22,8 @@
 #include "dnn_node/util/output_parser/utils.h"
 #include "rclcpp/rclcpp.hpp"
 
+#include <arm_neon.h>
+
 namespace hobot {
 namespace dnn_node {
 namespace parser_fcos {
@@ -71,6 +73,9 @@ FcosConfig default_fcos_config = {
      "hair drier",    "toothbrush"},
     ""};
 
+void CqatGetBboxAndScoresScaleNHWC(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                          std::vector<Detection> &dets);
+
 void GetBboxAndScoresNHWC(std::vector<std::shared_ptr<DNNTensor>> &tensors,
                           std::vector<Detection> &dets);
 
@@ -84,6 +89,7 @@ FcosConfig fcos_config_ = default_fcos_config;
 float score_threshold_ = 0.5;
 float nms_threshold_ = 0.6;
 int nms_top_k_ = 500;
+bool community_qat_ = false;
 
 int InitClassNum(const int &class_num) {
   if(class_num > 0){
@@ -176,7 +182,9 @@ int LoadConfig(const rapidjson::Document &document) {
   if (document.HasMember("nms_top_k")) {
     nms_top_k_ = document["nms_top_k"].GetInt();
   }
-
+  if (document.HasMember("community_qat")) {
+    community_qat_ = document["community_qat"].GetBool();
+  }
   return 0;
 }
 
@@ -195,6 +203,138 @@ int32_t Parse(
   }
 
   return ret;
+}
+
+static inline uint32x4x4_t CalculateIndex(uint32_t idx,
+                                          float32x4_t a,
+                                          float32x4_t b,
+                                          uint32x4x4_t c) {
+  uint32x4_t mask{0};
+  mask = vcltq_f32(b, a);
+  uint32x4_t vec_idx = {idx, idx + 1, idx + 2, idx + 3};
+  uint32x4x4_t res = {{vbslq_u32(mask, vec_idx, c.val[0]), 0, 0, 0}};
+  return res;
+}
+
+static inline float32x2_t CalculateMax(float32x4_t in) {
+  auto pmax = vpmax_f32(vget_high_f32(in), vget_low_f32(in));
+  return vpmax_f32(pmax, pmax);
+}
+
+static inline uint32_t CalculateVectorIndex(uint32x4x4_t vec_res_idx,
+                                            float32x4_t vec_res_value) {
+  uint32x4_t res_idx_mask{0};
+  uint32x4_t mask_ones = vdupq_n_u32(0xFFFFFFFF);
+
+  auto pmax = CalculateMax(vec_res_value);
+  auto mask = vceqq_f32(vec_res_value, vcombine_f32(pmax, pmax));
+  res_idx_mask = vandq_u32(vec_res_idx.val[0], mask);
+  res_idx_mask = vaddq_u32(res_idx_mask, mask_ones);
+  auto pmin =
+      vpmin_u32(vget_high_u32(res_idx_mask), vget_low_u32(res_idx_mask));
+  pmin = vpmin_u32(pmin, pmin);
+  uint32_t res = vget_lane_u32(pmin, 0);
+  return (res - 0xFFFFFFFF);
+}
+
+static std::pair<float, int> MaxScoreID(int32_t *input,
+                                        float *scale,
+                                        int length) {
+  float init_res_value = input[0] * scale[0];
+  float32x4_t vec_res_value = vdupq_n_f32(init_res_value);
+  uint32x4x4_t vec_res_idx{{0}};
+  int i = 0;
+  for (; i <= (length - 4); i += 4) {
+    int32x4_t vec_input = vld1q_s32(input + i);
+    float32x4_t vec_scale = vld1q_f32(scale + i);
+
+    float32x4_t vec_elements = vmulq_f32(vcvtq_f32_s32(vec_input), vec_scale);
+    float32x4_t temp_vec_res_value = vmaxq_f32(vec_elements, vec_res_value);
+    vec_res_idx =
+        CalculateIndex(i, temp_vec_res_value, vec_res_value, vec_res_idx);
+    vec_res_value = temp_vec_res_value;
+  }
+
+  uint32_t idx = CalculateVectorIndex(vec_res_idx, vec_res_value);
+  float res = vget_lane_f32(CalculateMax(vec_res_value), 0);
+
+  // Compute left elements
+  for (; i < length; ++i) {
+    float score = input[i] * scale[i];
+    if (score > res) {
+      idx = i;
+      res = score;
+    }
+  }
+  std::pair<float, int> result_id_score = {res, idx};
+  return result_id_score;
+}
+
+void CqatGetBboxAndScoresScaleNHWC(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                          std::vector<Detection> &dets) {
+
+  // fcos stride is {8, 16, 32, 64, 128}
+  for (int i = 0; i < 5; i++) {
+    auto *cls_data = reinterpret_cast<int32_t *>(tensors[i]->sysMem[0].virAddr);
+    auto *bbox_data =
+        reinterpret_cast<int32_t *>(tensors[i + 5]->sysMem[0].virAddr);
+    auto *ce_data =
+        reinterpret_cast<int32_t *>(tensors[i + 10]->sysMem[0].virAddr);
+
+    float *cls_scale = tensors[i]->properties.scale.scaleData;
+    float *bbox_scale = tensors[i + 5]->properties.scale.scaleData;
+    float *ce_scale = tensors[i + 10]->properties.scale.scaleData;
+
+    // 同一个尺度下，tensor[i],tensor[i+5],tensor[i+10]出来的hw都一致，64*64/32*32/...
+    int *shape = tensors[i]->properties.alignedShape.dimensionSize;
+    int tensor_h = shape[1];
+    int tensor_w = shape[2];
+    int tensor_c = shape[3];
+    int32_t bbox_c_stride{
+        tensors[i + 5]->properties.alignedShape.dimensionSize[3]};
+    int32_t ce_c_stride{
+        tensors[i + 10]->properties.alignedShape.dimensionSize[3]};
+
+    for (int h = 0; h < tensor_h; h++) {
+      for (int w = 0; w < tensor_w; w++) {
+
+        // get score
+        int ce_offset = (h * tensor_w + w) * ce_c_stride;
+        float ce_data_offset =
+            1.0 / (1.0 + exp(-ce_data[ce_offset] * ce_scale[0]));
+        // argmax + neon
+        int cls_offset = (h * tensor_w + w) * tensor_c;
+        auto max_score_id =
+            MaxScoreID(cls_data + cls_offset, cls_scale, tensor_c);
+
+        // filter
+        float cls_data_offset = 1.0 / (1.0 + exp(-max_score_id.first));
+        float score = std::sqrt(cls_data_offset * ce_data_offset);
+
+        if (score <= score_threshold_) continue;
+
+        // get detection box
+        Detection detection;
+        int index = bbox_c_stride * (h * tensor_w + w);
+        auto &strides = fcos_config_.strides;
+
+        float xmin = std::max(0.f, bbox_data[index] * bbox_scale[0]);
+        float ymin = std::max(0.f, bbox_data[index + 1] * bbox_scale[1]);
+        float xmax = std::max(0.f, bbox_data[index + 2] * bbox_scale[2]);
+        float ymax = std::max(0.f, bbox_data[index + 3] * bbox_scale[3]);
+
+        detection.bbox.xmin = ((w + 0.5) - xmin) * strides[i];
+        detection.bbox.ymin = ((h + 0.5) - ymin) * strides[i];
+        detection.bbox.xmax = ((w + 0.5) + xmax) * strides[i];
+        detection.bbox.ymax = ((h + 0.5) + ymax) * strides[i];
+
+        detection.score = score;
+        detection.id = max_score_id.second;
+        detection.class_name = fcos_config_.class_names[detection.id].c_str();
+        dets.push_back(detection);
+      }
+    }
+  }
 }
 
 void GetBboxAndScoresNHWC(std::vector<std::shared_ptr<DNNTensor>> &tensors,
@@ -320,7 +460,7 @@ void GetBboxAndScoresNCHW(std::vector<std::shared_ptr<DNNTensor>> &tensors,
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
                 Perception &perception) {
   if (!tensors[0]) {
-    RCLCPP_INFO(rclcpp::get_logger("fcos_example"), "tensor layout error.");
+    RCLCPP_ERROR(rclcpp::get_logger("fcos_example"), "tensor layout error.");
     return -1;
   }
 
@@ -339,21 +479,31 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
   }
   for (size_t i = 0; i < tensors.size(); i++) {
     if (!tensors[i]) {
-      RCLCPP_INFO(rclcpp::get_logger("fcos_example"),
+      RCLCPP_ERROR(rclcpp::get_logger("fcos_example"),
                   "tensor layout null, error.");
       return -1;
     }
-    hbSysFlushMem(&(tensors[i]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
+    if (hbSysFlushMem(&(tensors[i]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE) != 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("fcos_example"),
+                  "FlushMem tensors[%d] failed.", i);
+      return -1;
+    }
   }
 
   std::vector<std::vector<ScoreId>> scores;
   std::vector<Detection> dets;
+
+  if (community_qat_) {
+    CqatGetBboxAndScoresScaleNHWC(tensors, dets);
+    yolo5_nms(dets, nms_threshold_, nms_top_k_, perception.det, false);
+    return 0;
+  }
   if (tensors[0]->properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {
     GetBboxAndScoresNHWC(tensors, dets);
   } else if (tensors[0]->properties.tensorLayout == HB_DNN_LAYOUT_NCHW) {
     GetBboxAndScoresNCHW(tensors, dets);
   } else {
-    RCLCPP_INFO(rclcpp::get_logger("fcos_example"), "tensor layout error.");
+    RCLCPP_ERROR(rclcpp::get_logger("fcos_example"), "tensor layout error.");
   }
 
   yolo5_nms(dets, nms_threshold_, nms_top_k_, perception.det, false);
