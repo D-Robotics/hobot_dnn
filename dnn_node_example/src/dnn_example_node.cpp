@@ -36,6 +36,8 @@
 #include "dnn_node/util/output_parser/detection/ptq_yolo3_darknet_output_parser.h"
 #include "dnn_node/util/output_parser/detection/ptq_yolo5_output_parser.h"
 #include "dnn_node/util/output_parser/detection/ptq_yolov5x_output_parser.h"
+#include "dnn_node/util/output_parser/detection/ptq_yolo8_output_parser.h"
+#include "dnn_node/util/output_parser/detection/ptq_yolo10_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
 
 #include "include/image_utils.h"
@@ -271,6 +273,12 @@ int DnnExampleNode::LoadConfig() {
     } else if ("yolov3" == str_parser) {
       parser = DnnParserType::YOLOV3_PARSER;
       ret = hobot::dnn_node::parser_yolov3::LoadConfig(document);
+    } else if ("yolov8" == str_parser) {
+      parser = DnnParserType::YOLOV8_PARSER;
+      ret = hobot::dnn_node::parser_yolov8::LoadConfig(document);
+    } else if ("yolov10" == str_parser) {
+      parser = DnnParserType::YOLOV10_PARSER;
+      ret = hobot::dnn_node::parser_yolov10::LoadConfig(document);
 #ifdef PLATFORM_X3
     } else if ("yolov5" == str_parser) {
       parser = DnnParserType::YOLOV5_PARSER;
@@ -388,6 +396,14 @@ int DnnExampleNode::PostProcess(
     case DnnParserType::YOLOV3_PARSER:
       parse_ret =
           hobot::dnn_node::parser_yolov3::Parse(node_output, det_result);
+      break;
+    case DnnParserType::YOLOV8_PARSER:
+      parse_ret =
+          hobot::dnn_node::parser_yolov8::Parse(node_output, det_result);
+      break;
+    case DnnParserType::YOLOV10_PARSER:
+      parse_ret =
+          hobot::dnn_node::parser_yolov10::Parse(node_output, det_result);
       break;
   #ifdef PLATFORM_X3
     case DnnParserType::YOLOV5_PARSER:

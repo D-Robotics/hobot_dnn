@@ -1,0 +1,11 @@
+{
+	"model_file": "/root/models/yolov10n_640x640_nv12.bin",
+	"dnn_Parser": "yolov10",
+	"model_output_count": 6, // (cls, box) * 3
+    "reg_max": 16,
+	"class_num": 80,
+	"cls_names_list": "config/coco.list",
+	"strides": [8, 16, 32],
+	"score_threshold": 0.25,
+	"top_k": 300
+}

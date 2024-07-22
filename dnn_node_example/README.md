@@ -113,7 +113,7 @@ X86 Ubuntu version: ubuntu20.04
 # Instructions
 
 ## Package Description
-The source code contains the **dnn_node_example package**, which can be configured to use the post-processing algorithms built into the dnn_node. Currently, the dnn_node supports post-processing algorithms such as "yolov2," "yolov3," "yolov5," "yolov5x," "FasterRcnn," "mobilenetv2," "mobilenet_ssd," "efficient_det," "fcos," and "mobilenet_unet."
+The source code contains the **dnn_node_example package**, which can be configured to use the post-processing algorithms built into the dnn_node. Currently, the dnn_node supports post-processing algorithms such as "yolov2," "yolov3," "yolov5," "yolov5x," "yolov8", "yolov10", "FasterRcnn", "mobilenetv2," "mobilenet_ssd," "efficient_det," "fcos," and "mobilenet_unet."
 
 ## Dependencies
 
@@ -254,6 +254,8 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
   | yolov3_416x416_nv12                    | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/yolov3.jpeg)        |
   | yolov5_672x672_nv12                    | Detection model | x3 | Output detected objects and bounding boxes | ![image](./render/yolov5.jpeg)        |
   | yolov5x_672x672_nv12                   | Detection model | Rdkultra | Output detected objects and bounding boxes | ![image](./render/yolov5x.jpeg)        |
+  | yolov8_416x416_nv12                    | Detection model | x3/x5/x86 | Output detected objects and bounding boxes | ![image](./render/yolov8.jpeg)        |
+  | yolov10_416x416_nv12                   | Detection model | x3/x5/x86 | Output detected objects and bounding boxes | ![image](./render/yolov10.jpeg)       |
   | mobilenet_ssd_300x300_nv12             | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/mobilenet_ssd.jpeg) |
   | fcos_512x512_nv12                      | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/fcos.jpeg)          |
   | efficient_det_no_dequanti_512x512_nv12 | Detection model | x3 | Output detected objects and bounding boxes | ![image](./render/efficient_det.jpeg) |
@@ -261,7 +263,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
   | mobilenetv2_224x224_nv12.bin           | Classification model | x3/x86 | Output the class result with the highest confidence | ![image](./render/mobilenetv2.jpeg)   |
   | mobilenet_unet_1024x2048_nv12.bin      | Segmentation model | x3/x86 | Semantic segmentation, output image with each pixel corresponding to its class | ![image](./render/unet.jpeg)          |
 
-"dnn_Parser" setting chooses the built-in post-processing algorithm, currently support configurations include `"yolov2", "yolov3", "yolov5", "yolov5x", "kps_parser", "classification", "ssd", "efficient_det", "fcos", "unet"`.
+"dnn_Parser" setting chooses the built-in post-processing algorithm, currently support configurations include `"yolov2", "yolov3", "yolov5", "yolov5x", "yolov8", "yolov10", "kps_parser", "classification", "ssd", "efficient_det", "fcos", "unet"`.
 "model_output_count" represents the number of model output branches.
 
 - Segmentation model algorithm currently only supports local image feedback and does not have web display functionality.
