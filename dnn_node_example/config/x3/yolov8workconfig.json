@@ -1,5 +1,5 @@
 {
-	"model_file": "/root/models/yolov8n_640x640_nv12.bin",
+	"model_file": "/opt/hobot/model/x3/basic/yolov8n_640x640_nv12.bin",
 	"dnn_Parser": "yolov8",
 	"model_output_count": 6, // (cls, box) * 3
     "reg_max": 16,
