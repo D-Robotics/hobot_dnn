@@ -137,6 +137,8 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 | config_file        | 配置文件路径                          | 否                   | "config/fcosworkconfig.json"                  | 更改配置文件配置不同模型，默认使用FCOS模型 |
 | dump_render_img    | 是否进行渲染，0：否；1：是            | 否                   | 0                   |                                                                         |
 | msg_pub_topic_name | 发布智能结果的topicname,用于web端展示 | 否                   | hobot_dnn_detection |                                                                         |
+| ros_img_topic_name | 订阅sensor_msgs::msg::Image类型图像消息的topic name | 否                   | /image |                                                                         |
+| sharedmem_img_topic_name | 订阅hbm_img_msgs::msg::HbmMsg1080P类型图像消息的topic name | 否                   | /hbmem_img |                                                                         |
 
 ## 运行
 
