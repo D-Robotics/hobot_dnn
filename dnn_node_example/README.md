@@ -133,6 +133,8 @@ The source code contains the **dnn_node_example package**, which can be configur
 | config_file         | Path to the configuration file         | No                   | "config/fcosworkconfig.json" | Change the configuration file to use different models, default uses FCOS model |
 | dump_render_img     | Whether to render, 0: no; 1: yes       | No                   | 0                   |                                                                         |
 | msg_pub_topic_name  | Topic name for publishing intelligent results for web display | No | hobot_dnn_detection |                                                                      |
+| ros_img_topic_name | Subscribe to the topic name of an Image message of type sensor_msgs::msg::Image | 否                   | /image |                                                                         |
+| sharedmem_img_topic_name | Subscribe to the topic name of the hbm_img_msgs::msg::HbmMsg1080P type image message | 否                   | /hbmem_img |                                                                         |
 
 ## Running
 
