@@ -586,6 +586,9 @@ int DnnExampleNode::PostProcess(
         if (parser_output->img_w > 0 && parser_output->img_h > 0) {
           if (roi.rect.x_offset < 0) roi.rect.x_offset = 0;
           if (roi.rect.y_offset < 0) roi.rect.y_offset = 0;
+          if (roi.rect.x_offset >= parser_output->img_w) roi.rect.x_offset = parser_output->img_w - 1;
+          if (roi.rect.y_offset >= parser_output->img_h) roi.rect.y_offset = parser_output->img_h - 1;
+
           if (roi.rect.x_offset + roi.rect.width >= parser_output->img_w) {
             roi.rect.width = parser_output->img_w - 1 - roi.rect.x_offset;
           }
