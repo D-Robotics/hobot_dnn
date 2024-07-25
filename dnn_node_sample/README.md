@@ -1,12 +1,12 @@
 English| [简体中文](./README_cn.md)
 
-Getting Started with Dnn Node Sample
+Getting Started with DNN Node Sample
 =======
 
 
 # Introduction
 
-The Dnn Node sample package is an example of using the Dnn Node package. By inheriting the DnnNode virtual base class, it utilizes the YOLOv5 model and image data to perform algorithm inference on a BPU processor.
+The DNN Node sample package is an example of using the Dnn Node package. By inheriting the DnnNode virtual base class, it utilizes the YOLOv5 model and image data to perform algorithm inference on a BPU processor.
 
 The image data comes from subscribed image data messages, supporting image data published using MIPI/USB cameras and local images. After the inference is completed, a custom algorithm output parsing method is used to parse the algorithm's output tensor. Once parsed, the intelligent results are published, and real-time rendering effects can be viewed through a web interface.
 
@@ -19,11 +19,11 @@ The image data comes from subscribed image data messages, supporting image data 
 
 # Compilation
 
-- X3 Version: Supports compilation on X3 Ubuntu system and cross-compilation on PC using Docker.
-- X86 Version: Supports compilation on X86 Ubuntu system.
+- X3: Supports compilation on X3 Ubuntu system and cross-compilation on PC using Docker.
+- X86: Supports compilation on X86 Ubuntu system.
 Compilation dependencies and package functionalities can be controlled through compilation options.
 
-## Compilation on X3 Ubuntu System for X3 Version
+## X3 Ubuntu
 
 1. Confirm Compilation Environment
 
@@ -36,11 +36,11 @@ Compilation dependencies and package functionalities can be controlled through c
 
 - Compilation command: `colcon build --packages-select dnn_node_sample`
 
-## Docker Cross-Compilation for X3 Version
+## Docker Cross-Compilation for X3
 
 1. Confirm Compilation Environment
 
-- Compile in Docker environment, and TROS is already compiled in Docker. For detailed instructions on Docker installation, cross-compilation, TROS compilation, and deployment, please refer to the [Horizon Robotics Platform User Manual](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros).
+- Compile in Docker environment, and TROS is already compiled in Docker. For detailed instructions on Docker installation, cross-compilation, TROS compilation, and deployment, please refer to the [D-Robotics RDK User Manual](https://developer.d-robotics.cc/rdk_doc_en/Robot_development/quick_start/cross_compiles).
 
 2. Compilation
 
@@ -59,13 +59,15 @@ colcon build --packages-select dnn_node_sample \
    -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
 ```  
 
-# Instructions for Use
+# Usage Guide
 
-## Running on X3 Ubuntu System
+## Execution
+
+###  X3 Ubuntu
 
 Including image message publishing and web display.
 
-**Publishing Images Using F37 MIPI Camera**
+**Publish Images by F37 MIPI Camera**
 
 ```shell
 # Set up the TogetherROS environment
@@ -80,7 +82,7 @@ export CAM_TYPE=mipi
 ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
-**Publishing Images Using USB Camera**
+**Publish Images by USB Camera**
 
 ```shell
 # Set up the TogetherROS environment
@@ -95,7 +97,7 @@ export CAM_TYPE=usb
 ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
-**Injecting Local Images**
+**Use Local Images**
 ```shell
 # Setup TogetherROS environment
 source /opt/tros/setup.bash
@@ -124,7 +126,7 @@ The default feedback image is `/opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/conf
 
 Illustration using local image feedback.
 
-## X3 Result Display
+## X3
 
 Execute the following command:
 
@@ -161,7 +163,7 @@ webserver has launch
 
 The log shows that both the frame rates of subscribing image messages and publishing AI messages are around 10fps, with the algorithm taking about 70 milliseconds for single-frame inference and about 78 milliseconds for output parsing.
 
-## Web Effect Display
+## Web Display
 
 Web effect screenshot:
 
