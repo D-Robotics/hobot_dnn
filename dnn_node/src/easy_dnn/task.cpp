@@ -1,4 +1,4 @@
-// Copyright (c) [2024] [Horizon Robotics].
+// Copyright (c) [2024] [D-Robotics].
 //
 // You can use this software according to the terms and conditions of
 // the Apache v2.0.

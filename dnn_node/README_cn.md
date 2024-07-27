@@ -6,9 +6,9 @@ Getting Started with Dnn Node
 
 # 功能介绍
 
-通过阅读本文档，用户可以在地平线X3开发板上使用模型和图像数据利用BPU处理器进行模型推理，并处理解析后的模型输出。
+通过阅读本文档，用户可以在RDK X3开发板上使用模型和图像数据利用BPU处理器进行模型推理，并处理解析后的模型输出。
 
-Dnn Node package是地平线机器人开发平台的一部分，基于地平线 libdnn 和ROS2 Node进行二次开发，为应用开发提供更简单易用的模型集成开发接口，包括模型管理、基于模型描述的输入处理及结果解析，以及模型输出内存分配管理等功能。
+Dnn Node package是基于libdnn 和ROS2 Node进行二次开发，为应用开发提供更简单易用的模型集成开发接口，包括模型管理、基于模型描述的输入处理及结果解析，以及模型输出内存分配管理等功能。
 
 Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的数据结构和接口，用户需要继承DnnNode类并实现前后处理和配置接口。
 
@@ -70,7 +70,7 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 1、编译环境确认
 
-- 在docker中编译，并且docker中已经编译好TROS。docker安装、交叉编译说明、TROS编译和部署说明详见[地平线机器人平台用户手册](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros)。
+- 在docker中编译，并且docker中已经编译好TROS。docker安装、交叉编译说明、TROS编译和部署说明详见[机器人平台用户手册](https://developer.d-robotics.cc/rdk_doc/Quick_start)。
 
 2、编译
 

@@ -4,7 +4,7 @@
   <name>dnn_node_sample</name>
   <version>2.3.2</version>
   <description>TogetheROS dnn node sample</description>
-  <maintainer email="kao.zhu@horizon.ai">zhukao</maintainer>
+  <maintainer email="kao.zhu@d-robotics.cc">zhukao</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

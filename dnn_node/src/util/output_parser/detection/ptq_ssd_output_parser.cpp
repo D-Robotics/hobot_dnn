@@ -1,4 +1,4 @@
-// Copyright (c) 2022，Horizon Robotics.
+// Copyright (c) 2024，D-Robotics.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -246,7 +246,7 @@ int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
     // get softmax sum
     double sum = 0;
     int max_id = 0;
-    // TODO(@horizon.ai): fastExp only affect the final score value
+    // TODO(@d-robotics.cc): fastExp only affect the final score value
     // confirm whether it affects the accuracy
     double background_score;
     if (is_performance_) {

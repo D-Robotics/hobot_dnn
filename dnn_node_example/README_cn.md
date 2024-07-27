@@ -144,7 +144,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 - dnn_node_example使用到的模型在安装tros.b的时候已经安装，RDK X3安装在`/opt/hobot/model/x3/basic`路径下，RDK Ultra安装在`/opt/hobot/model/rdkultra/basic/`路径下，RDK X5安装在`/opt/hobot/model/x5/basic`路径下。
 
-- 编译成功后，将生成的install路径拷贝到地平线RDK上（如果是在RDK上编译，忽略拷贝步骤），并执行如下命令运行。
+- 编译成功后，将生成的install路径拷贝到RDK上（如果是在RDK上编译，忽略拷贝步骤），并执行如下命令运行。
 
 ## X3 Ubuntu系统上运行
 
