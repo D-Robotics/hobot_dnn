@@ -37,6 +37,13 @@ namespace dnn_node {
 
 enum class ImageType { BGR = 0, RGB = 1};
 
+std::pair<int, int> GetResizedImgShape(
+    const int img_h,
+    const int img_w,
+    const int model_h,
+    const int model_w
+);
+
 class ImageProc {
  public:
   // 使用nv12编码格式图片数据生成NV12PyramidInput
@@ -103,6 +110,8 @@ class ImageProc {
   //   - NV12PyramidInput类型的指针，包含NV12格式的金字塔输入数据
   static std::shared_ptr<NV12PyramidInput> GetNV12PyramidFromBGR(
       const std::string &image_file,
+      int &image_height,
+      int &image_width,
       int scaled_img_height,
       int scaled_img_width);
 

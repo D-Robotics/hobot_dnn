@@ -20,6 +20,7 @@
 #include "dnn_node/util/output_parser/perception_common.h"
 
 using hobot::dnn_node::output_parser::Detection;
+using hobot::dnn_node::output_parser::YOLOSeg;
 
 /**
  * Non-maximum suppression
@@ -48,5 +49,12 @@ void yolo5_nms(std::vector<Detection> &input,
                int top_k,
                std::vector<Detection> &result,
                bool suppress);
+
+void yolo_seg_nms(std::vector<YOLOSeg> &input,
+         float iou_threshold,
+         int top_k,
+         std::vector<YOLOSeg> &result,
+         bool suppress = false);
+
 
 #endif  // _UTIL_NMS_H_
