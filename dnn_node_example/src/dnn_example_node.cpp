@@ -39,6 +39,7 @@
 #include "dnn_node/util/output_parser/detection/ptq_yolo8_output_parser.h"
 #include "dnn_node/util/output_parser/detection/ptq_yolo10_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
+#include "dnn_node/util/output_parser/segmentation/ptq_yolo8_seg_output_parser.h"
 
 #include "include/image_utils.h"
 #include "include/post_process/post_process_unet.h"
@@ -82,7 +83,6 @@ int ResizeNV12Img(const char *in_img_data,
     resized_width = static_cast<float>(in_img_width) / dst_ratio;
     resized_height = scaled_img_height;
   }
-
   // hobot_cv要求输出宽度为16的倍数
   int remain = resized_width % 16;
   if (remain != 0) {
@@ -320,11 +320,14 @@ int DnnExampleNode::LoadConfig() {
       ret = hobot::dnn_node::parser_fcos::LoadConfig(document);
     } else if ("unet" == str_parser) {
       parser = DnnParserType::UNET_PARSER;
+    } else if ("yolov8_seg" == str_parser) {
+      parser = DnnParserType::YOLOV8_SEG_PARSER;
+      ret = hobot::dnn_node::parser_yolov8_seg::LoadConfig(document);
     } else {
       std::stringstream ss;
       ss << "Error! Invalid parser: " << str_parser
-         << " . Only yolov2, yolov3, yolov5, yolov5x, ssd, fcos"
-         << " efficient_det, classification, unet are supported";
+         << " . Only yolov2, yolov3, yolov5, yolov5x, yolov8, yolov10, ssd, fcos"
+         << " efficient_det, classification, unet, yolov8-seg are supported";
       RCLCPP_ERROR(rclcpp::get_logger("example"), "%s", ss.str().c_str());
       return -3;
     }
@@ -439,12 +442,19 @@ int DnnExampleNode::PostProcess(
       break;
     case DnnParserType::UNET_PARSER:
       parse_ret = hobot::dnn_node::parser_unet::Parse(node_output, 
-                                            parser_output->img_w,
-                                            parser_output->img_h,
-                                            parser_output->model_w,
-                                            parser_output->model_h,
-                                            dump_render_img_,
+                                            image_height,
+                                            image_width,
+                                            model_input_height_,
+                                            model_input_width_,
                                             det_result);
+      break;
+    case DnnParserType::YOLOV8_SEG_PARSER:
+      parse_ret = hobot::dnn_node::parser_yolov8_seg::Parse(node_output, 
+                                                            image_height,
+                                                            image_width,
+                                                            model_input_height_,
+                                                            model_input_width_,
+                                                            det_result);
       break;
     default:
       RCLCPP_ERROR(rclcpp::get_logger("example"), "Inlvaid parser: %d", parser);
@@ -527,13 +537,14 @@ int DnnExampleNode::PostProcess(
   auto &seg = det_result->perception.seg;
   if (seg.height != 0 && seg.width != 0) {
     if (dump_render_img_) {
-      hobot::dnn_node::parser_unet::RenderUnet(node_output, seg);
+      hobot::dnn_node::parser_unet::RenderSeg(node_output, seg);
     }
 
     ai_msgs::msg::Capture capture;
     capture.features.swap(seg.data);
-    capture.img.height = seg.height;
-    capture.img.width = seg.width;
+    capture.img.height = seg.valid_h;
+    capture.img.width = seg.valid_w;
+
     capture.img.step = model_input_width_ / seg.width;
 
     RCLCPP_INFO(rclcpp::get_logger("SegmentationPostProcess"),
@@ -561,7 +572,11 @@ int DnnExampleNode::PostProcess(
 
   // 如果开启了渲染，本地渲染并存储图片
   if (dump_render_img_ && parser_output->pyramid) {
-    ImageUtils::Render(parser_output->pyramid, pub_data);
+    auto [out_img_h, out_img_w] = hobot::dnn_node::GetResizedImgShape(image_height,
+                                                     image_width,
+                                                     model_input_height_,
+                                                     model_input_width_);
+    ImageUtils::Render(parser_output->pyramid, pub_data, out_img_h, out_img_w);
   }
 
   if (parser_output->ratio != 1.0) {
@@ -679,7 +694,7 @@ int DnnExampleNode::FeedFromLocal() {
   if (static_cast<int>(ImageType::BGR) == image_type_) {
     // bgr img，支持将图片resize到模型输入size
     pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromBGR(
-        image_file_, model_input_height_, model_input_width_);
+        image_file_, image_height, image_width, model_input_height_, model_input_width_);
     if (!pyramid) {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
                    "Get Nv12 pym fail with image: %s",
@@ -750,6 +765,9 @@ void DnnExampleNode::RosImgProcess(
   if (!rclcpp::ok()) {
     return;
   }
+
+  image_height = img_msg->height;
+  image_width = img_msg->width;
 
   std::stringstream ss;
   ss << "Recved img encoding: " << img_msg->encoding
@@ -920,6 +938,9 @@ void DnnExampleNode::SharedMemImgProcess(
     *this->get_clock(), 3000,
     "%s, comm delay [%.4f]ms",
     ss.str().c_str(), duration_ms);
+
+  image_height = img_msg->height;
+  image_width = img_msg->width;
 
   auto tp_start = std::chrono::system_clock::now();
 

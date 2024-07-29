@@ -31,7 +31,7 @@ namespace hobot {
 namespace dnn_node {
 namespace parser_unet {
 
-int RenderUnet(
+int RenderSeg(
     const std::shared_ptr<DnnNodeOutput> &node_output, Parsing &seg) {
   static uint8_t bgr_putpalette[] = {
       128, 64,  128, 244, 35,  232, 70,  70,  70,  102, 102, 156, 190, 153, 153,
@@ -43,11 +43,11 @@ int RenderUnet(
       std::dynamic_pointer_cast<DnnExampleOutput>(node_output);
   auto pyramid = dnnExampleOutput->pyramid;
   if (!pyramid) {
-    RCLCPP_ERROR(rclcpp::get_logger("UnetPostProcess"), "Invalid pyramid!");
+    RCLCPP_ERROR(rclcpp::get_logger("SegPostProcess"), "Invalid pyramid!");
     return -1;
   }
-  int parsing_width = seg.width;
-  int parsing_height = seg.height;
+  int parsing_width = seg.valid_w;
+  int parsing_height = seg.valid_h;
 
   char *y_img = reinterpret_cast<char *>(pyramid->y_vir_addr);
   char *uv_img = reinterpret_cast<char *>(pyramid->uv_vir_addr);
@@ -59,16 +59,21 @@ int RenderUnet(
   memcpy(buf, y_img, img_y_size);
   memcpy(buf + img_y_size, uv_img, img_uv_size);
   cv::Mat nv12(height * 3 / 2, width, CV_8UC1, buf);
-  cv::Mat mat;                               //  get bgr mat from pyramid
-  cv::cvtColor(nv12, mat, CV_YUV2BGR_NV12);  //  nv12 to bgr
+  cv::Mat tmp;                               //  get bgr mat from pyramid
+  cv::cvtColor(nv12, tmp, CV_YUV2BGR_NV12);  //  nv12 to bgr
   delete[] buf;
+
+  int img_w = seg.width;
+  int img_h = seg.height;
+
+  cv::Mat mat = tmp(cv::Rect(0, 0, img_w, img_h));
 
   cv::Mat parsing_img(parsing_height, parsing_width, CV_8UC3);
   uint8_t *parsing_img_ptr = parsing_img.ptr<uint8_t>();
 
   for (int h = 0; h < parsing_height; ++h) {
     for (int w = 0; w < parsing_width; ++w) {
-      auto id = seg.seg[h * parsing_width + w];
+      auto id = seg.seg[h * parsing_width + w] % 19;
       *parsing_img_ptr++ = bgr_putpalette[id * 3];
       *parsing_img_ptr++ = bgr_putpalette[id * 3 + 1];
       *parsing_img_ptr++ = bgr_putpalette[id * 3 + 2];
@@ -83,12 +88,12 @@ int RenderUnet(
   cv::Mat dst;
   addWeighted(mat, alpha_f, parsing_img, 1 - alpha_f, 0.0, dst);
   mat = std::move(dst);
-  std::string saving_path = "render_unet_" + dnnExampleOutput->msg_header->frame_id + "_" +
+  std::string saving_path = "render_seg_" + dnnExampleOutput->msg_header->frame_id + "_" +
                             std::to_string(dnnExampleOutput->msg_header->stamp.sec) + "_" +
                             std::to_string(dnnExampleOutput->msg_header->stamp.sec) +
                             ".jpeg";
 
-  RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"),
+  RCLCPP_INFO(rclcpp::get_logger("SegPostProcess"),
               "Draw result to file: %s",
               saving_path.c_str());
   cv::imwrite(saving_path, mat);

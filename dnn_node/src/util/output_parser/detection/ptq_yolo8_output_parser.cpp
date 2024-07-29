@@ -23,8 +23,9 @@
 #include "rapidjson/document.h"
 #include "rclcpp/rclcpp.hpp"
 
-#include "dnn_node/util/output_parser/utils.h"
 #include "dnn_node/util/output_parser/detection/nms.h"
+#include "dnn_node/util/output_parser/utils.h"
+
 
 namespace hobot {
 namespace dnn_node {
@@ -170,7 +171,7 @@ int InitRegMax(const int &reg_max) {
 
 int InitStrides(const std::vector<int> &strides, const int &model_output_count){
   int size = strides.size();
-  if(size != model_output_count){
+  if(size * 2 != model_output_count){
     RCLCPP_ERROR(rclcpp::get_logger("yolo8_detection_parser"),
                 "strides size %d is not equal to model_output_count %d",
                 size, model_output_count);

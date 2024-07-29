@@ -108,6 +108,7 @@ if(PLATFORM_X3)
     src/util/output_parser/detection/fcos_output_parser.cpp
     src/util/output_parser/classification/ptq_classification_output_parser.cpp
     src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo8_seg_output_parser.cpp
     src/easy_dnn/input_process.cpp
     src/easy_dnn/model.cpp
     src/easy_dnn/model_infer_task.cpp
@@ -143,6 +144,7 @@ elseif(PLATFORM_Rdkultra)
     src/util/output_parser/detection/fcos_output_parser.cpp
     src/util/output_parser/classification/ptq_classification_output_parser.cpp
     src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo8_seg_output_parser.cpp
     src/easy_dnn/input_process.cpp
     src/easy_dnn/model.cpp
     src/easy_dnn/model_infer_task.cpp
@@ -177,6 +179,7 @@ elseif(PLATFORM_X5)
     src/util/output_parser/detection/fcos_output_parser.cpp
     src/util/output_parser/classification/ptq_classification_output_parser.cpp
     src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo8_seg_output_parser.cpp
     src/easy_dnn/input_process.cpp
     src/easy_dnn/model.cpp
     src/easy_dnn/model_infer_task.cpp
@@ -211,6 +214,7 @@ elseif(PLATFORM_X86)
     src/util/output_parser/detection/fcos_output_parser.cpp
     src/util/output_parser/classification/ptq_classification_output_parser.cpp
     src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo8_seg_output_parser.cpp
     src/easy_dnn/input_process.cpp
     src/easy_dnn/model.cpp
     src/easy_dnn/model_infer_task.cpp

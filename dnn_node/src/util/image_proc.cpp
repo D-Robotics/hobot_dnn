@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include "include/util/image_proc.h"
 
 #include <algorithm>
 #include <cstring>
@@ -20,13 +21,35 @@
 #include <string>
 #include <vector>
 
-#include "dnn/hb_sys.h"
 #include "rclcpp/rclcpp.hpp"
 
-#include "include/util/image_proc.h"
+#include "dnn/hb_sys.h"
 
 namespace hobot {
 namespace dnn_node {
+
+std::pair<int, int> GetResizedImgShape(
+    const int img_h,
+    const int img_w,
+    const int model_h,
+    const int model_w
+) {
+  float ratio_h =
+      static_cast<float>(img_h) / static_cast<float>(model_h);
+  float ratio_w = 
+      static_cast<float>(img_w) / static_cast<float>(model_w);
+  float dst_ratio = std::max(ratio_w, ratio_h);
+  int resized_width, resized_height;
+  // 按照固定比例进行缩放
+  if (dst_ratio == ratio_w) {
+    resized_width = model_w;
+    resized_height = static_cast<int>(static_cast<float>(img_h) / dst_ratio);
+  } else if (dst_ratio == ratio_h) {
+    resized_width = static_cast<int>(static_cast<float>(img_w) / dst_ratio);
+    resized_height = model_h;
+  }
+  return {resized_height, resized_width};
+}
 
 std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
     const char *in_img_data,
@@ -237,6 +260,8 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGRImg(
 
 std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
     const std::string &image_file,
+    int &img_height,
+    int &img_width,
     int scaled_img_height,
     int scaled_img_width) {
   cv::Mat nv12_mat;
@@ -250,29 +275,23 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
       original_img_height != scaled_img_height) {
     pad_frame =
         cv::Mat(scaled_img_height, w_stride, CV_8UC3, cv::Scalar::all(0));
-    if (static_cast<uint32_t>(original_img_width) > w_stride ||
-        original_img_height > scaled_img_height) {
-      float ratio_w =
-          static_cast<float>(original_img_width) / static_cast<float>(w_stride);
-      float ratio_h = static_cast<float>(original_img_height) /
-                      static_cast<float>(scaled_img_height);
-      float dst_ratio = std::max(ratio_w, ratio_h);
-      uint32_t resized_width =
-          static_cast<float>(original_img_width) / dst_ratio;
-      uint32_t resized_height =
-          static_cast<float>(original_img_height) / dst_ratio;
-      cv::resize(bgr_mat, bgr_mat, cv::Size(resized_width, resized_height));      
-    }
-
-    // 复制到目标图像中间
-    bgr_mat.copyTo(pad_frame(cv::Rect((w_stride - bgr_mat.cols) / 2,
-                                      (scaled_img_height - bgr_mat.rows) / 2,
+    auto [resized_height, resized_width] = GetResizedImgShape(original_img_height, 
+                                                              original_img_width,
+                                                              scaled_img_height,
+                                                              w_stride);
+    img_height = resized_height;
+    img_width = resized_width;
+    cv::resize(bgr_mat, bgr_mat, cv::Size(resized_width, resized_height));
+    // 复制到目标图像左上角
+    bgr_mat.copyTo(pad_frame(cv::Rect(0,
+                                      0,
                                       bgr_mat.cols,
                                       bgr_mat.rows)));
   } else {
+    img_height = original_img_width;
+    img_width = original_img_height;
     pad_frame = bgr_mat;
   }
-  // cv::imwrite("resized_img.jpg", pad_frame);
   auto ret = ImageProc::BGRToNv12(pad_frame, nv12_mat);
   if (ret) {
     RCLCPP_ERROR(rclcpp::get_logger("image_proc"), "get nv12 image from bgr failed ");
