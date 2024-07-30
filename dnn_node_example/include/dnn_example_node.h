@@ -83,8 +83,8 @@ struct DnnExampleOutput : public DnnNodeOutput {
 
 class DnnExampleNode : public DnnNode {
  public:
-  DnnExampleNode(const std::string &node_name,
-                 const NodeOptions &options = NodeOptions());
+  DnnExampleNode(const NodeOptions &options = NodeOptions(),
+                const std::string &node_name = "dnn_example_node");
   ~DnnExampleNode() override;
 
  protected:

@@ -100,8 +100,8 @@ int ResizeNV12Img(const char *in_img_data,
       src, in_img_height, in_img_width, out_img, resized_height, resized_width);
 }
 
-DnnExampleNode::DnnExampleNode(const std::string &node_name,
-                               const NodeOptions &options)
+DnnExampleNode::DnnExampleNode(const NodeOptions &options,
+                              const std::string &node_name)
     : DnnNode(node_name, options) {
   // 更新配置
   this->declare_parameter<int>("feed_type", feed_type_);
@@ -1061,3 +1061,6 @@ void DnnExampleNode::SharedMemImgProcess(
   }
 }
 #endif
+
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(DnnExampleNode)
