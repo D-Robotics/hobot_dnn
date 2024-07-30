@@ -267,9 +267,12 @@ perception_common.h为定义的解析后的感知结果数据类型。
 | 目标检测       | [YoloV2](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html)       |   ptq_yolo2_output_parser.h       |
 | 目标检测       | [YoloV3](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html)       |    ptq_yolo3_darknet_output_parser.h       |
 | 目标检测       | [YoloV5](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html)       |  ptq_yolo5_output_parser.h        |
+| 目标检测       | [YoloV8](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html)       |  ptq_yolo8_output_parser.h        |
+| 目标检测       | [YoloV10](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html)       |  ptq_yolo10_output_parser.h        |
 | 人体检测       | [FasterRcnn](https://developer.horizon.cc/documents_tros/boxs/function/mono2d_body_detection.html)             |  fasterrcnn_output_parser.h       |
 | 图片分类       | [mobilenetv2](https://developer.horizon.cc/documents_tros/boxs/classification/mobilenetv2.html)  |  ptq_classification_output_parser.h        |
 | 语义分割       | [mobilenet_unet](https://developer.horizon.cc/documents_tros/boxs/segmentation/mobilenet_unet.html)      |  ptq_unet_output_parser.h        |
+| 实例分割       | [YoloV8Seg](https://developer.horizon.cc/documents_tros/boxs/segmentation/yolo.html)      |  ptq_yolo8_seg_output_parser.h        |
 
 
 在推理结果回调`PostProcess(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output)`中，使用`hobot_dnn`中内置的解析方法解析`YoloV5`算法输出举例：

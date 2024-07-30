@@ -265,9 +265,12 @@ The algorithm models and their corresponding output parsing methods are as follo
 | Object Detection | [YoloV2](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html) | ptq_yolo2_output_parser.h |
 | Object Detection | [YoloV3](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html) | ptq_yolo3_darknet_output_parser.h |
 | Object Detection | [YoloV5](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html) | ptq_yolo5_output_parser.h |
+| Object Detection | [YoloV8](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html) | ptq_yolo8_output_parser.h |
+| Object Detection | [YoloV10](https://developer.horizon.cc/documents_tros/boxs/detection/yolo.html) | ptq_yolo10_output_parser.h |
 | Human Detection | [FasterRcnn](https://developer.horizon.cc/documents_tros/boxs/function/mono2d_body_detection.html) | fasterrcnn_output_parser.h |
 | Image Classification | [mobilenetv2](https://developer.horizon.cc/documents_tros/boxs/classification/mobilenetv2.html) | ptq_classification_output_parser.h |
 | Semantic Segmentation | [mobilenet_unet](https://developer.horizon.cc/documents_tros/boxs/segmentation/mobilenet_unet.html) | ptq_unet_output_parser.h |
+| Instance Segmentation | [YoloV8Seg](https://developer.horizon.cc/documents_tros/boxs/segmentation/yolo.html) | ptq_yolo8_seg_output_parser.h |
 
 In the inference result callback `PostProcess(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output)`, using the built-in parsing method in `hobot_dnn` to parse the output of the `YoloV5` algorithm is shown in the following example:
 
