@@ -262,8 +262,9 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
   | multitask_body_kps_960x544.hbm         | Detection model | x3/x86 | Output detected body bounding boxes and human keypoint indices | ![image](./render/body_kps.jpeg)      |
   | mobilenetv2_224x224_nv12.bin           | Classification model | x3/x86 | Output the class result with the highest confidence | ![image](./render/mobilenetv2.jpeg)   |
   | mobilenet_unet_1024x2048_nv12.bin      | Segmentation model | x3/x86 | Semantic segmentation, output image with each pixel corresponding to its class | ![image](./render/unet.jpeg)          |
+  | yolov8_seg_672x672_nv12                | Segmentation model | x5/x86 | Instance segmentation, output the detected objects and their corresponding pixels      | ![image](./render/yolov8seg.jpeg)      |
 
-"dnn_Parser" setting chooses the built-in post-processing algorithm, currently support configurations include `"yolov2", "yolov3", "yolov5", "yolov5x", "yolov8", "yolov10", "kps_parser", "classification", "ssd", "efficient_det", "fcos", "unet"`.
+"dnn_Parser" setting chooses the built-in post-processing algorithm, currently support configurations include `"yolov2", "yolov3", "yolov5", "yolov5x", "yolov8", "yolov10", "kps_parser", "classification", "ssd", "efficient_det", "fcos", "unet", "yolov8seg"`.
 "model_output_count" represents the number of model output branches.
 
 - Segmentation model algorithm currently only supports local image feedback and does not have web display functionality.
