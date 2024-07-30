@@ -254,10 +254,10 @@ int LoadConfig(const rapidjson::Document &document) {
 }
 
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
-                int img_h,
-                int img_w,
-                int model_h, 
-                int model_w,
+                const int resized_img_h,
+                const int resized_img_w,
+                const int model_h, 
+                const int model_w,
                 Perception &perception);
 
 double Dequanti(int32_t data,
@@ -354,20 +354,19 @@ void ParseTensor(std::shared_ptr<DNNTensor> clses,
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output, 
-    int img_h,
-    int img_w,
-    int model_h,
-    int model_w,
+    const int resized_img_h,
+    const int resized_img_w,
+    const int model_h,
+    const int model_w,
     std::shared_ptr<DnnParserResult> &result) {
   if (!result) {
     result = std::make_shared<DnnParserResult>();
   }
 
   auto ts_start = std::chrono::steady_clock::now();
-
   int ret = PostProcess(node_output->output_tensors, 
-                        img_h, 
-                        img_w,
+                        resized_img_h,
+                        resized_img_w,
                         model_h,
                         model_w,
                         result->perception);
@@ -395,8 +394,8 @@ int32_t Parse(
 
 
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
-                int img_h,
-                int img_w,
+                int resized_img_h,
+                int resized_img_w,
                 int model_h,
                 int model_w,
                 Perception &perception) {
@@ -468,14 +467,8 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
 
   std::shared_ptr<DNNTensor> proto = output_tensors[output_tensors.size() - 1];
 
-  float resize_ratio_h = static_cast<float>(img_h) / static_cast<float>(model_h);
-  float resize_ratio_w = static_cast<float>(img_w) / static_cast<float>(model_w);
-  float dst_ratio = std::max(resize_ratio_w, resize_ratio_h);
-  // 根据长边的缩放系数计算出输出长宽上有效的比例
-  float valid_h_ratio = resize_ratio_h < resize_ratio_w? 
-    (static_cast<float>(img_h) / dst_ratio) / model_h: 1.0;
-  float valid_w_ratio = resize_ratio_w < resize_ratio_h? 
-    (static_cast<float>(img_w) / dst_ratio) / model_w: 1.0;
+  float valid_h_ratio = static_cast<float>(resized_img_h) / static_cast<float>(model_h);
+  float valid_w_ratio = static_cast<float>(resized_img_w) / static_cast<float>(model_w);
 
   int proto_h = model_h / yolo8_seg_config_.strides[0] * 2;
   int proto_w = model_w / yolo8_seg_config_.strides[0] * 2;

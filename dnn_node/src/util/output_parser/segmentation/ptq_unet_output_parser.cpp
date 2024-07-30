@@ -28,10 +28,10 @@ int num_classes_ = 19;
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& node_output,
-    int img_h,
-    int img_w,
-    int model_h,
-    int model_w,
+    const int resized_img_h,
+    const int resized_img_w,
+    const int model_h,
+    const int model_w,
     std::shared_ptr<DnnParserResult>& result) {
   if (!result) {
     result = std::make_shared<DnnParserResult>();
@@ -41,10 +41,9 @@ int32_t Parse(
                  "output_tensors is empty");
     return -1;
   }
-
   int ret = PostProcess(node_output->output_tensors, 
-                        img_h,
-                        img_w,
+                        resized_img_h,
+                        resized_img_w,
                         model_h,
                         model_w,
                         result->perception);
@@ -62,10 +61,10 @@ int32_t Parse(
 }
 
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
-                int img_h,
-                int img_w,
-                int model_h,
-                int model_w,
+                const int resized_img_h,
+                const int resized_img_w,
+                const int model_h,
+                const int model_w,
                 Perception& perception) {
   perception.type = Perception::SEG;
   hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
@@ -85,14 +84,8 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
                seg_height,
                channel);
 
-  float resize_ratio_h = static_cast<float>(img_h) / static_cast<float>(model_h);
-  float resize_ratio_w = static_cast<float>(img_w) / static_cast<float>(model_w);
-  float dst_ratio = std::max(resize_ratio_w, resize_ratio_h);
-  // 根据长边的缩放系数计算出输出长宽上有效的比例
-  float valid_h_ratio = resize_ratio_h < resize_ratio_w? 
-    (static_cast<float>(img_h) / dst_ratio) / model_h: 1.0;
-  float valid_w_ratio = resize_ratio_w < resize_ratio_h? 
-    (static_cast<float>(img_w) / dst_ratio) / model_w: 1.0;
+  float valid_h_ratio = static_cast<float>(resized_img_h) / static_cast<float>(model_h);
+  float valid_w_ratio = static_cast<float>(resized_img_w) / static_cast<float>(model_w);
 
   int valid_h = static_cast<int>(valid_h_ratio * seg_height);
   int valid_w = static_cast<int>(valid_w_ratio * seg_width);

@@ -64,6 +64,8 @@ int CalTimeMsDuration(const builtin_interfaces::msg::Time &start,
 int ResizeNV12Img(const char *in_img_data,
                   const int &in_img_height,
                   const int &in_img_width,
+                  int &resized_img_height,
+                  int &resized_img_width,
                   const int &scaled_img_height,
                   const int &scaled_img_width,
                   cv::Mat &out_img,
@@ -95,6 +97,9 @@ int ResizeNV12Img(const char *in_img_data,
   resized_height =
       resized_height % 2 == 0 ? resized_height : resized_height - 1;
   ratio = dst_ratio;
+
+  resized_img_height = resized_height;
+  resized_img_width = resized_width;
 
   return hobot_cv::hobotcv_resize(
       src, in_img_height, in_img_width, out_img, resized_height, resized_width);
@@ -442,18 +447,18 @@ int DnnExampleNode::PostProcess(
       break;
     case DnnParserType::UNET_PARSER:
       parse_ret = hobot::dnn_node::parser_unet::Parse(node_output, 
-                                            image_height,
-                                            image_width,
-                                            model_input_height_,
-                                            model_input_width_,
-                                            det_result);
+                                                      parser_output->resized_h, 
+                                                      parser_output->resized_w,
+                                                      parser_output->model_h,
+                                                      parser_output->model_w,
+                                                      det_result);
       break;
     case DnnParserType::YOLOV8_SEG_PARSER:
       parse_ret = hobot::dnn_node::parser_yolov8_seg::Parse(node_output, 
-                                                            image_height,
-                                                            image_width,
-                                                            model_input_height_,
-                                                            model_input_width_,
+                                                            parser_output->resized_h, 
+                                                            parser_output->resized_w, 
+                                                            parser_output->model_h,
+                                                            parser_output->model_w,
                                                             det_result);
       break;
     default:
@@ -572,11 +577,7 @@ int DnnExampleNode::PostProcess(
 
   // 如果开启了渲染，本地渲染并存储图片
   if (dump_render_img_ && parser_output->pyramid) {
-    auto [out_img_h, out_img_w] = hobot::dnn_node::GetResizedImgShape(image_height,
-                                                     image_width,
-                                                     model_input_height_,
-                                                     model_input_width_);
-    ImageUtils::Render(parser_output->pyramid, pub_data, out_img_h, out_img_w);
+    ImageUtils::Render(parser_output->pyramid, pub_data, parser_output->resized_h, parser_output->resized_w);
   }
 
   if (parser_output->ratio != 1.0) {
@@ -687,14 +688,20 @@ int DnnExampleNode::FeedFromLocal() {
         rclcpp::get_logger("example"), "Image: %s not exist!", image_file_.c_str());
     return -1;
   }
-
+  auto dnn_output = std::make_shared<DnnExampleOutput>();
   // 1. 将图片处理成模型输入数据类型DNNInput
   // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
   std::shared_ptr<hobot::dnn_node::NV12PyramidInput> pyramid = nullptr;
   if (static_cast<int>(ImageType::BGR) == image_type_) {
     // bgr img，支持将图片resize到模型输入size
     pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromBGR(
-        image_file_, image_height, image_width, model_input_height_, model_input_width_);
+        image_file_,
+        dnn_output->img_h,
+        dnn_output->img_w,
+        dnn_output->resized_h, 
+        dnn_output->resized_w, 
+        model_input_height_, 
+        model_input_width_);
     if (!pyramid) {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
                    "Get Nv12 pym fail with image: %s",
@@ -711,6 +718,14 @@ int DnnExampleNode::FeedFromLocal() {
     ifs.seekg(0, std::ios::beg);
     char *data = new char[len];
     ifs.read(data, len);
+
+    dnn_output->img_h = image_height;
+    dnn_output->img_w = image_width;
+    dnn_output->resized_h = std::min(image_height, model_input_height_);
+    dnn_output->resized_w = std::min(image_width, model_input_width_);
+    dnn_output->model_h = model_input_height_;
+    dnn_output->model_w = model_input_width_;
+
     pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
         data,
         image_height,
@@ -735,7 +750,8 @@ int DnnExampleNode::FeedFromLocal() {
   // 2. 使用pyramid创建DNNInput对象inputs
   // inputs将会作为模型的输入通过RunInferTask接口传入
   auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
-  auto dnn_output = std::make_shared<DnnExampleOutput>();
+  dnn_output->model_w = model_input_width_;
+  dnn_output->model_h = model_input_height_;
   dnn_output->msg_header = std::make_shared<std_msgs::msg::Header>();
   dnn_output->msg_header->set__frame_id("feedback");
 
@@ -766,8 +782,6 @@ void DnnExampleNode::RosImgProcess(
     return;
   }
 
-  image_height = img_msg->height;
-  image_width = img_msg->width;
 
   std::stringstream ss;
   ss << "Recved img encoding: " << img_msg->encoding
@@ -810,6 +824,10 @@ void DnnExampleNode::RosImgProcess(
                    "after cvtColorForDisplay cost ms: %d",
                    interval);
     }
+
+    dnn_output->resized_h = model_input_height_;
+    dnn_output->resized_w = model_input_width_;
+
     pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromBGRImg(
         cv_img->image, model_input_height_, model_input_width_);
   } else if ("bgr8" == img_msg->encoding) {
@@ -830,6 +848,10 @@ void DnnExampleNode::RosImgProcess(
                    "after cvtColorForDisplay cost ms: %d",
                    interval);
     }
+
+    dnn_output->resized_h = model_input_height_;
+    dnn_output->resized_w = model_input_width_;
+
     pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromBGRImg(
         cv_img->image, model_input_height_, model_input_width_);
   } else if ("nv12" == img_msg->encoding) {  // nv12格式使用hobotcv resize
@@ -840,6 +862,8 @@ void DnnExampleNode::RosImgProcess(
       if (ResizeNV12Img(reinterpret_cast<const char *>(img_msg->data.data()),
                         img_msg->height,
                         img_msg->width,
+                        dnn_output->resized_h,
+                        dnn_output->resized_w,
                         model_input_height_,
                         model_input_width_,
                         out_img,
@@ -858,6 +882,12 @@ void DnnExampleNode::RosImgProcess(
           model_input_height_,
           model_input_width_);
     } else {  //不需要进行resize
+
+      image_height = img_msg->height;
+      image_width = img_msg->width;
+      dnn_output->resized_h = std::min(image_height, model_input_height_);
+      dnn_output->resized_w = std::min(image_width, model_input_width_);
+
       pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
           reinterpret_cast<const char *>(img_msg->data.data()),
           img_msg->height,
@@ -887,12 +917,11 @@ void DnnExampleNode::RosImgProcess(
   auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
 
   // 3. 初始化输出
-  if (parser == DnnParserType::UNET_PARSER) {
-    dnn_output->img_w = img_msg->width;
-    dnn_output->img_h = img_msg->height;
-    dnn_output->model_w = model_input_width_;
-    dnn_output->model_h = model_input_height_;
-  }
+  dnn_output->img_w = img_msg->width;
+  dnn_output->img_h = img_msg->height;
+  dnn_output->model_w = model_input_width_;
+  dnn_output->model_h = model_input_height_;
+
   dnn_output->msg_header = std::make_shared<std_msgs::msg::Header>();
   dnn_output->msg_header->set__frame_id(img_msg->header.frame_id);
   dnn_output->msg_header->set__stamp(img_msg->header.stamp);
@@ -957,6 +986,8 @@ void DnnExampleNode::SharedMemImgProcess(
       if (ResizeNV12Img(reinterpret_cast<const char *>(img_msg->data.data()),
                         img_msg->height,
                         img_msg->width,
+                        dnn_output->resized_h,
+                        dnn_output->resized_w,
                         model_input_height_,
                         model_input_width_,
                         out_img,
@@ -975,6 +1006,12 @@ void DnnExampleNode::SharedMemImgProcess(
           model_input_height_,
           model_input_width_);
     } else {
+      
+      image_height = img_msg->height;
+      image_width = img_msg->width;
+      dnn_output->resized_h = std::min(image_height, model_input_height_);
+      dnn_output->resized_w = std::min(image_width, model_input_width_);
+
       //不需要进行resize
       pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
           reinterpret_cast<const char *>(img_msg->data.data()),
@@ -991,13 +1028,11 @@ void DnnExampleNode::SharedMemImgProcess(
     return;
   }
 
-  // 如果运行的是unet算法，设置后处理需要的参数
-  if (parser == DnnParserType::UNET_PARSER) {
-    dnn_output->img_w = img_msg->width;
-    dnn_output->img_h = img_msg->height;
-    dnn_output->model_w = model_input_width_;
-    dnn_output->model_h = model_input_height_;
-  }
+  // 初始化输出
+  dnn_output->img_w = img_msg->width;
+  dnn_output->img_h = img_msg->height;
+  dnn_output->model_w = model_input_width_;
+  dnn_output->model_h = model_input_height_;
 
   // 生成pyramid数据失败
   if (!pyramid) {

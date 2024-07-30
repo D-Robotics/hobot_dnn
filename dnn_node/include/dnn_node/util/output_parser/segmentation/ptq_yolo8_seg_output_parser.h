@@ -41,10 +41,10 @@ int LoadConfig(const rapidjson::Document &document);
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
-    int img_h,
-    int img_w,
-    int model_h,
-    int model_w,
+    const int resized_img_h,
+    const int resized_img_w,
+    const int model_h,
+    const int model_w,
     std::shared_ptr<DnnParserResult> &output);
 }  // namespace parser_yolov8_seg
 }  // namespace dnn_node

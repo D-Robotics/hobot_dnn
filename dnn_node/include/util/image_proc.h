@@ -102,6 +102,7 @@ class ImageProc {
       int scaled_img_width);
 
   // 从BGR格式的图像文件中读取数据并生成NV12格式的金字塔输入
+  // 对于图像分辨率不满足模型输入的，会进行resize并放置中间在四周进行pad
   // - 参数
   //   - [in] image_file 图像文件的路径
   //   - [in] scaled_img_height 模型输入的高度
@@ -110,8 +111,27 @@ class ImageProc {
   //   - NV12PyramidInput类型的指针，包含NV12格式的金字塔输入数据
   static std::shared_ptr<NV12PyramidInput> GetNV12PyramidFromBGR(
       const std::string &image_file,
-      int &image_height,
-      int &image_width,
+      int scaled_img_height,
+      int scaled_img_width);
+
+  // 从BGR格式的图像文件中读取数据并生成NV12格式的金字塔输入
+  // 对于图像分辨率不满足模型输入的，会进行resize并放置左上角然后进行pad
+  // - 参数
+  //   - [in] image_file 图像文件的路径
+  //   - [in] raw_img_height 原始图像的高度
+  //   - [in] raw_img_width 原始图像的宽度
+  //   - [in] img_height 图像resize后的高度
+  //   - [in] img_width 图像resize后的宽度
+  //   - [in] scaled_img_height 模型输入的高度
+  //   - [in] scaled_img_width 模型输入的宽度
+  // - 返回值
+  //   - NV12PyramidInput类型的指针，包含NV12格式的金字塔输入数据
+  static std::shared_ptr<NV12PyramidInput> GetNV12PyramidFromBGR(
+      const std::string &image_file,
+      int &raw_img_height,
+      int &raw_img_width,
+      int &img_height,
+      int &img_width,
       int scaled_img_height,
       int scaled_img_width);
 
