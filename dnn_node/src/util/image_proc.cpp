@@ -365,17 +365,17 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
     int scaled_img_width) {
   cv::Mat nv12_mat;
   cv::Mat bgr_mat = cv::imread(image_file, cv::IMREAD_COLOR);
-  int original_img_width = raw_img_width = bgr_mat.cols;
-  int original_img_height = raw_img_height = bgr_mat.rows;
+  raw_img_width = bgr_mat.cols;
+  raw_img_height = bgr_mat.rows;
 
   auto w_stride = ALIGN_16(scaled_img_width);
   cv::Mat pad_frame;
-  if (static_cast<uint32_t>(original_img_width) != w_stride ||
-      original_img_height != scaled_img_height) {
+  if (static_cast<uint32_t>(raw_img_width) != w_stride ||
+      raw_img_height != scaled_img_height) {
     pad_frame =
         cv::Mat(scaled_img_height, w_stride, CV_8UC3, cv::Scalar::all(0));
-    auto [resized_height, resized_width] = GetResizedImgShape(original_img_height, 
-                                                              original_img_width,
+    auto [resized_height, resized_width] = GetResizedImgShape(raw_img_height, 
+                                                              raw_img_width,
                                                               scaled_img_height,
                                                               w_stride);
     img_height = resized_height;
@@ -387,8 +387,8 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
                                       bgr_mat.cols,
                                       bgr_mat.rows)));
   } else {
-    img_height = original_img_width;
-    img_width = original_img_height;
+    img_height = raw_img_height;
+    img_width = raw_img_width;
     pad_frame = bgr_mat;
   }
   return ImageProc::GetNV12PyramidFromBGRImg(pad_frame, scaled_img_height, scaled_img_width);
