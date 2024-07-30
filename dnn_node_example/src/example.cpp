@@ -1,4 +1,4 @@
-// Copyright (c) 2022，Horizon Robotics.
+// Copyright (c) 2024，D-Robotics.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
   RCLCPP_WARN(rclcpp::get_logger("example"), "This is dnn node example!");
 
-  rclcpp::spin(std::make_shared<DnnExampleNode>("example"));
+  rclcpp::spin(std::make_shared<DnnExampleNode>());
 
   rclcpp::shutdown();
   return 0;

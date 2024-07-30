@@ -1,29 +1,29 @@
 English| [简体中文](./README_cn.md)
 
-Getting Started with Dnn Node Example
+Getting Started with DNN Node Example
 =======
 
 
-# Feature Introduction
+# Introduction
 
 Dnn Node example package is a usage example of Dnn Node package. By inheriting the DnnNode virtual base class, it utilizes the BPU processor for model inference with model and image data. Image data can come from local image injection and subscribed image msg. By configuring the built-in post-processing algorithms in dnn_node, intelligent results are published in the post-processing of dnn node example, and the effects can be viewed through a web interface.
 
 # Development Environment
 
 - Programming Language: C/C++
-- Development Platform: X3/Rdkultra/X5/X86
-- System Version: Ubuntu 20.04/Ubuntu 22.04
+- Development Platform: X3/Ultra/X5/X86
+- System: Ubuntu 20.04/Ubuntu 22.04
 - Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 11.4.0
 
 # Compilation
 
-- X3 Version: Supports compilation on the X3 Ubuntu system and cross-compilation using Docker on a PC.
+- X3: Supports compilation on the X3 Ubuntu system and cross-compilation using Docker on a PC.
 
-- Rdkultra Version: Supports compilation on the Rdkultra Ubuntu system and cross-compilation using Docker on a PC.
+- Ultra: Supports compilation on the Ultra Ubuntu system and cross-compilation using Docker on a PC.
 
-- X5 Version: Supports compilation on the X5 Ubuntu system and cross-compilation using Docker on a PC.
+- X5: Supports compilation on the X5 Ubuntu system and cross-compilation using Docker on a PC.
 
-- X86 Version: Supports compilation on the X86 Ubuntu system.
+- X86: Supports compilation on the X86 Ubuntu system.
 
 It also supports controlling the dependencies and functionality of the compiled pkg through compilation options.
 
@@ -49,11 +49,13 @@ hbm_img_msgs is a custom image message format used for image transmission in sha
 - Shared memory transmission switch, enabled by default (ON), can be turned off during compilation using the -DSHARED_MEM=OFF command.
 - When enabled, compilation and execution depend on the hbm_img_msgs pkg and require the use of tros for compilation.
 - When disabled, compilation and execution do not depend on the hbm_img_msgs pkg, supporting compilation using native ROS and tros.
-- For shared memory communication, only subscription to nv12 format images is currently supported.## Compile on X3/Rdkultra Ubuntu System
+- For shared memory communication, only subscription to nv12 format images is currently supported.
+
+## Compile on X3/Ultra/X5 Ubuntu System
 
 1. Compilation Environment Verification
 
-- The X3 Ubuntu system is installed on the board.
+- The Ubuntu system is installed on the board.
 - The current compilation terminal has set up the TogetherROS environment variable: `source PATH/setup.bash`. Where PATH is the installation path of TogetherROS.
 - The ROS2 compilation tool colcon is installed. If the installed ROS does not include the compilation tool colcon, it needs to be installed manually. Installation command for colcon: `pip install -U colcon-common-extensions`.
 - The dnn node package has been compiled.
@@ -87,7 +89,7 @@ hbm_img_msgs is a custom image message format used for image transmission in sha
 
 - Shared memory communication method is enabled by default in the compilation options.
 
-## Compile X86 Version on X86 Ubuntu System
+## Compile on X86 Ubuntu System
 
 1. Compilation Environment Verification
 
@@ -107,10 +109,7 @@ X86 Ubuntu version: ubuntu20.04
      -DTHIRD_PARTY=`pwd`/../sysroot_docker
   ```
 
-## Notes
-
-
-# Instructions
+# Usage guide
 
 ## Package Description
 The source code contains the **dnn_node_example package**, which can be configured to use the post-processing algorithms built into the dnn_node. Currently, the dnn_node supports post-processing algorithms such as "yolov2," "yolov3," "yolov5," "yolov5x," "yolov8", "yolov10", "FasterRcnn", "mobilenetv2," "mobilenet_ssd," "efficient_det," "fcos," and "mobilenet_unet."
@@ -133,16 +132,18 @@ The source code contains the **dnn_node_example package**, which can be configur
 | config_file         | Path to the configuration file         | No                   | "config/fcosworkconfig.json" | Change the configuration file to use different models, default uses FCOS model |
 | dump_render_img     | Whether to render, 0: no; 1: yes       | No                   | 0                   |                                                                         |
 | msg_pub_topic_name  | Topic name for publishing intelligent results for web display | No | hobot_dnn_detection |                                                                      |
+| ros_img_topic_name | Subscribe to the topic name of an Image message of type sensor_msgs::msg::Image | No                   | /image |                                                                         |
+| sharedmem_img_topic_name | Subscribe to the topic name of the hbm_img_msgs::msg::HbmMsg1080P type image message | No                   | /hbmem_img |                                                                         |
 
-## Running
+## Execution
 
 - The models used by dnn_node_example are already installed during tros.b installation. The RDK X3 is installed in `/opt/hobot/model/x3/basic`, the RDK Ultra is installed in `/opt/hobot/model/rdkultra/basic/`, and the RDK X5 is installed in `/opt/hobot/model/x5/basic/` after a successful build. 
 
-- After compilation, copy the generated install path to the Horizon RDK (if compiling on the RDK, skip the copying step) and run the following command.
+- After compilation, copy the generated install path to the D-Robotics RDK (if compiling on the RDK, skip the copying step) and run the following command.
 
-## Running on X3 Ubuntu System
+## X3 Ubuntu
 
-Running method 1, use the executable file to start:
+Running mode 1, use the executable file to start:
 ```shell
 export COLCON_CURRENT_PREFIX=./install
 source ./install/local_setup.bash
@@ -180,7 +181,7 @@ export CAM_TYPE=mipi
 ros2 launch dnn_node_example dnn_node_example.launch.py
 ```
 
-## Run on X3 Yocto system:
+## X3 Yocto
 
 ```shell
 export ROS_LOG_DIR=/userdata/
@@ -199,7 +200,7 @@ cp -r install/lib/dnn_node_example/config/ .
 ./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 --ros-args --log-level warn
 ```
 
-## Run on X86 Ubuntu system:
+## X86 Ubuntu
 
 ```shell
 export COLCON_CURRENT_PREFIX=./install
@@ -212,7 +213,7 @@ cp -r ./install/lib/dnn_node_example/config/ .
 ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
 ```
 
-## Running on Rdkultra Ubuntu System
+## Ultra Ubuntu
 
 ```shell
 export COLCON_CURRENT_PREFIX=install
@@ -269,9 +270,9 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
 
 - Segmentation model algorithm currently only supports local image feedback and does not have web display functionality.
 
-# Results Analysis
+# Results
 
-## X3 Results Display
+## X3
 
 log:
 
@@ -357,9 +358,11 @@ Command executed: `ros2 run dnn_node_example example --ros-args -p config_file:=
 
 ```
 
-Rendered image: ![image](./render/yolov3.jpeg)
+Rendered image: 
 
-## Web demonstration
+![image](./render/yolov3.jpeg)
+
+## Web
 The web demonstration uses the model detection results of yolov2. The startup process is as follows:
 
 ```shell

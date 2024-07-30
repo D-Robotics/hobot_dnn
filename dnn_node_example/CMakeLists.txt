@@ -1,4 +1,4 @@
-# Copyright (c) 2024，Horizon Robotics.
+# Copyright (c) 2024，D-Robotics.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ find_package(dnn_node REQUIRED)
 find_package(hobot_cv REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV 3.4.5 REQUIRED)
+find_package(rclcpp_components REQUIRED)
 
 option(SHARED_MEM "using shared mem" ON)
 if (${SHARED_MEM})
@@ -102,16 +103,22 @@ link_directories(
   ${SYS_ROOT}/usr/lib/
 )
 
-add_executable(example
-  src/example.cpp
+add_library(${PROJECT_NAME}_plugin SHARED
   src/dnn_example_node.cpp
   src/image_utils.cpp
   src/post_process/post_process_unet.cpp
 )
 
+rclcpp_components_register_node(${PROJECT_NAME}_plugin
+  PLUGIN "DnnExampleNode"
+  EXECUTABLE example
+)
+set(node_plugins "${node_plugins}DnnExampleNode;$<TARGET_FILE:${PROJECT_NAME}_plugin>\n")
+
 ament_target_dependencies(
-  example
+  ${PROJECT_NAME}_plugin
   rclcpp
+  rclcpp_components
   dnn_node
   sensor_msgs
   ai_msgs
@@ -121,7 +128,7 @@ ament_target_dependencies(
 
 if (${SHARED_MEM})
   ament_target_dependencies(
-    example
+    ${PROJECT_NAME}_plugin
     hbm_img_msgs
   )
 endif ()
@@ -132,7 +139,7 @@ ${PROJECT_SOURCE_DIR}
 
 # Install executables
 install(
-  TARGETS example
+  TARGETS ${PROJECT_NAME}_plugin
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 

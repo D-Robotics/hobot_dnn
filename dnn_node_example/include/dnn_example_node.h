@@ -1,4 +1,4 @@
-// Copyright (c) 2022，Horizon Robotics.
+// Copyright (c) 2024，D-Robotics.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -86,8 +86,8 @@ struct DnnExampleOutput : public DnnNodeOutput {
 
 class DnnExampleNode : public DnnNode {
  public:
-  DnnExampleNode(const std::string &node_name,
-                 const NodeOptions &options = NodeOptions());
+  DnnExampleNode(const NodeOptions &options = NodeOptions(),
+                const std::string &node_name = "dnn_example_node");
   ~DnnExampleNode() override;
 
  protected:

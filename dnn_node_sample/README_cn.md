@@ -43,7 +43,7 @@ Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode�
 
 1、编译环境确认
 
-- 在docker中编译，并且docker中已经编译好TROS。docker安装、交叉编译、TROS编译和部署说明详见[地平线机器人平台用户手册](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros)。
+- 在docker中编译，并且docker中已经编译好TROS。docker安装、交叉编译、TROS编译和部署说明详见[机器人平台用户手册](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros)。
 
 2、编译
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2022，Horizon Robotics.
+// Copyright (c) 2024，D-Robotics.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -105,8 +105,8 @@ int ResizeNV12Img(const char *in_img_data,
       src, in_img_height, in_img_width, out_img, resized_height, resized_width);
 }
 
-DnnExampleNode::DnnExampleNode(const std::string &node_name,
-                               const NodeOptions &options)
+DnnExampleNode::DnnExampleNode(const NodeOptions &options,
+                              const std::string &node_name)
     : DnnNode(node_name, options) {
   // 更新配置
   this->declare_parameter<int>("feed_type", feed_type_);
@@ -130,6 +130,9 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
   this->get_parameter<std::string>("config_file", config_file);
   this->get_parameter<std::string>("msg_pub_topic_name", msg_pub_topic_name_);
 
+  ros_img_topic_name_ = this->declare_parameter("ros_img_topic_name", ros_img_topic_name_);
+  sharedmem_img_topic_name_ = this->declare_parameter("sharedmem_img_topic_name", sharedmem_img_topic_name_);
+
   {
     std::stringstream ss;
     ss << "Parameter:"
@@ -138,7 +141,9 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
        << "\n dump_render_img: " << dump_render_img_
        << "\n is_shared_mem_sub: " << is_shared_mem_sub_
        << "\n config_file: " << config_file
-       << "\n msg_pub_topic_name_: " << msg_pub_topic_name_;
+       << "\n msg_pub_topic_name: " << msg_pub_topic_name_
+       << "\n ros_img_topic_name: " << ros_img_topic_name_
+       << "\n sharedmem_img_topic_name: " << sharedmem_img_topic_name_;
     RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
   }
   // 加载配置文件config_file
@@ -581,6 +586,11 @@ int DnnExampleNode::PostProcess(
   }
 
   if (parser_output->ratio != 1.0) {
+    RCLCPP_DEBUG_STREAM(get_logger(),
+      "ratio:" << parser_output->ratio
+      << ", img w:" << parser_output->img_w
+      << ", img h:" << parser_output->img_h
+      );
     // 前处理有对图片进行resize，需要将坐标映射到对应的订阅图片分辨率
     for (auto &target : pub_data->targets) {
       for (auto &roi : target.rois) {
@@ -588,7 +598,31 @@ int DnnExampleNode::PostProcess(
         roi.rect.y_offset *= parser_output->ratio;
         roi.rect.width *= parser_output->ratio;
         roi.rect.height *= parser_output->ratio;
+        
+        if (parser_output->img_w > 0 && parser_output->img_h > 0) {
+          if (roi.rect.x_offset < 0) roi.rect.x_offset = 0;
+          if (roi.rect.y_offset < 0) roi.rect.y_offset = 0;
+          if (roi.rect.x_offset >= parser_output->img_w) roi.rect.x_offset = parser_output->img_w - 1;
+          if (roi.rect.y_offset >= parser_output->img_h) roi.rect.y_offset = parser_output->img_h - 1;
+
+          if (roi.rect.x_offset + roi.rect.width >= parser_output->img_w) {
+            roi.rect.width = parser_output->img_w - 1 - roi.rect.x_offset;
+          }
+          if (roi.rect.y_offset + roi.rect.height >= parser_output->img_h) {
+            roi.rect.height = parser_output->img_h - 1 - roi.rect.y_offset;
+          }
+        }
       }
+    }
+  }
+
+  for (auto &target : pub_data->targets) {
+    for (auto &roi : target.rois) {
+      RCLCPP_DEBUG(this->get_logger(),
+      "pub rect: %d %d %d %d, det type: %s, score:%f",
+      roi.rect.x_offset, roi.rect.y_offset,
+      roi.rect.x_offset + roi.rect.width, roi.rect.y_offset + roi.rect.height,
+      target.type.c_str(), roi.confidence);
     }
   }
 
@@ -921,7 +955,6 @@ void DnnExampleNode::RosImgProcess(
   dnn_output->img_h = img_msg->height;
   dnn_output->model_w = model_input_width_;
   dnn_output->model_h = model_input_height_;
-
   dnn_output->msg_header = std::make_shared<std_msgs::msg::Header>();
   dnn_output->msg_header->set__frame_id(img_msg->header.frame_id);
   dnn_output->msg_header->set__stamp(img_msg->header.stamp);
@@ -1085,3 +1118,6 @@ void DnnExampleNode::SharedMemImgProcess(
   }
 }
 #endif
+
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(DnnExampleNode)
