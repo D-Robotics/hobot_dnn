@@ -130,15 +130,45 @@ typedef struct Classification {
 } Classification;
 
 struct Parsing {
-  std::vector<int8_t> seg;
-  std::vector<float> data;
+  std::vector<int8_t> seg; // 生成本地渲染图片用到
+  std::vector<float> data; // 生成web展示时用到
   int32_t num_classes = 0;
-  int32_t width = 0;
-  int32_t valid_h = 0;
-  int32_t valid_w = 0;
-  int32_t height = 0;
+  int32_t width = 0; // 图像送入模型前经过resize的w
+  int32_t valid_h = 0; // seg的h
+  int32_t valid_w = 0; // seg的w
+  int32_t height = 0; // 图像送入模型前经过resize的h
   int32_t channel = 0;
 };
+
+typedef struct YOLOSegmentation : public Detection {
+  std::vector<float> mask;
+  YOLOSegmentation() {}
+
+  YOLOSegmentation(int id, float score, Bbox bbox, std::vector<float> &&mask)
+      : Detection(id, score, bbox), mask(std::move(mask)) {}
+  
+  YOLOSegmentation(int id, float score, Bbox bbox, const char *class_name, std::vector<float> &&mask)
+      : Detection(id, score, bbox, class_name), mask(std::move(mask)) {}
+  
+  friend bool operator>(const YOLOSegmentation &lhs, const YOLOSegmentation &rhs) {
+    return (lhs.score > rhs.score);
+  }
+
+  friend std::ostream &operator<<(std::ostream &os, const YOLOSegmentation &seg) {
+    os << "{"
+       << R"("prob")"
+       << ":" << std::fixed << std::setprecision(5) << seg.score << ","
+       << R"("label")"
+       << ":" << seg.id << ","
+       << R"("class_name")"
+       << ":"
+       << "\"" << seg.class_name << "\""
+       << "}";
+    return os;
+  }
+
+  ~YOLOSegmentation() {}
+} YOLOSeg;
 
 struct MaskResultInfo {
   int32_t width = 0;

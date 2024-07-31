@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include "include/util/image_proc.h"
 
 #include <algorithm>
 #include <cstring>
@@ -20,13 +21,35 @@
 #include <string>
 #include <vector>
 
-#include "dnn/hb_sys.h"
 #include "rclcpp/rclcpp.hpp"
 
-#include "include/util/image_proc.h"
+#include "dnn/hb_sys.h"
 
 namespace hobot {
 namespace dnn_node {
+
+std::pair<int, int> GetResizedImgShape(
+    const int img_h,
+    const int img_w,
+    const int model_h,
+    const int model_w
+) {
+  float ratio_h =
+      static_cast<float>(img_h) / static_cast<float>(model_h);
+  float ratio_w = 
+      static_cast<float>(img_w) / static_cast<float>(model_w);
+  float dst_ratio = std::max(ratio_w, ratio_h);
+  int resized_width, resized_height;
+  // 按照固定比例进行缩放
+  if (dst_ratio == ratio_w) {
+    resized_width = model_w;
+    resized_height = static_cast<int>(static_cast<float>(img_h) / dst_ratio);
+  } else if (dst_ratio == ratio_h) {
+    resized_width = static_cast<int>(static_cast<float>(img_w) / dst_ratio);
+    resized_height = model_h;
+  }
+  return {resized_height, resized_width};
+}
 
 std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
     const char *in_img_data,
@@ -42,7 +65,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
   //内存初始化
   memset(y->virAddr, 0, scaled_img_height * w_stride);
   memset(uv->virAddr, 0, scaled_img_height / 2 * w_stride);
-
+  // 根据图像和模型输入的最短的长和宽去图像里截取部分
   const uint8_t *data = reinterpret_cast<const uint8_t *>(in_img_data);
   auto *hb_y_addr = reinterpret_cast<uint8_t *>(y->virAddr);
   auto *hb_uv_addr = reinterpret_cast<uint8_t *>(uv->virAddr);
@@ -100,7 +123,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
   if (in_img_width > scaled_img_width && in_img_height > scaled_img_height) {
     return nullptr;
   }
-
+  // 图像位于中间，在四周pad
   // 2 计算padding参数
   auto w_stride = ALIGN_16(scaled_img_width);
   if (w_stride > in_img_width) {
@@ -177,6 +200,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGRImg(
   cv::Mat nv12_mat;
   cv::Mat mat_tmp;
   mat_tmp.create(scaled_img_height, scaled_img_width, bgr_mat.type());
+  // 将图像resize到与模型输入分辨率一样
   cv::resize(bgr_mat, mat_tmp, mat_tmp.size(), 0, 0);
   // cv::imwrite("resized_img.jpg", mat_tmp);
   auto ret = ImageProc::BGRToNv12(mat_tmp, nv12_mat);
@@ -264,7 +288,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
       cv::resize(bgr_mat, bgr_mat, cv::Size(resized_width, resized_height));      
     }
 
-    // 复制到目标图像中间
+    // 复制到目标图像中间，在四周pad
     bgr_mat.copyTo(pad_frame(cv::Rect((w_stride - bgr_mat.cols) / 2,
                                       (scaled_img_height - bgr_mat.rows) / 2,
                                       bgr_mat.cols,
@@ -330,12 +354,53 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
                                            });
 }
 
+
+std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
+    const std::string &image_file,
+    int &raw_img_height,
+    int &raw_img_width,
+    int &img_height,
+    int &img_width,
+    int scaled_img_height,
+    int scaled_img_width) {
+  cv::Mat nv12_mat;
+  cv::Mat bgr_mat = cv::imread(image_file, cv::IMREAD_COLOR);
+  raw_img_width = bgr_mat.cols;
+  raw_img_height = bgr_mat.rows;
+
+  auto w_stride = ALIGN_16(scaled_img_width);
+  cv::Mat pad_frame;
+  if (static_cast<uint32_t>(raw_img_width) != w_stride ||
+      raw_img_height != scaled_img_height) {
+    pad_frame =
+        cv::Mat(scaled_img_height, w_stride, CV_8UC3, cv::Scalar::all(0));
+    auto [resized_height, resized_width] = GetResizedImgShape(raw_img_height, 
+                                                              raw_img_width,
+                                                              scaled_img_height,
+                                                              w_stride);
+    img_height = resized_height;
+    img_width = resized_width;
+    cv::resize(bgr_mat, bgr_mat, cv::Size(resized_width, resized_height));
+    // 按长宽固定比例resize后复制到目标图像左上角
+    bgr_mat.copyTo(pad_frame(cv::Rect(0,
+                                      0,
+                                      bgr_mat.cols,
+                                      bgr_mat.rows)));
+  } else {
+    img_height = raw_img_height;
+    img_width = raw_img_width;
+    pad_frame = bgr_mat;
+  }
+  return ImageProc::GetNV12PyramidFromBGRImg(pad_frame, scaled_img_height, scaled_img_width);
+}
+
 std::shared_ptr<DNNTensor> ImageProc::GetNV12TensorFromNV12(const std::string &image_file,
                                                       int scaled_img_height,
                                                       int scaled_img_width) {
   cv::Mat nv12_mat;
   cv::Mat bgr_mat = cv::imread(image_file, cv::IMREAD_COLOR);
   cv::Mat mat_tmp;
+  // 将图像resize到模型输入的分辨率
   mat_tmp.create(scaled_img_height, scaled_img_width, bgr_mat.type());
   cv::resize(bgr_mat, mat_tmp, mat_tmp.size());
   auto ret = ImageProc::BGRToNv12(mat_tmp, nv12_mat);
@@ -637,7 +702,7 @@ std::shared_ptr<DNNTensor> ImageProc::GetBGRTensorFromBGRImg(
   hbSysAllocCachedMem(mem, scaled_img_height * w_stride * 3 * src_elem_size);
   //内存初始化
   memset(mem->virAddr, 0, scaled_img_height * w_stride * 3 * src_elem_size);
-
+  // 根据图像和模型输入的长款的最短边进行截取
   const uint8_t *data = reinterpret_cast<const uint8_t *>(in_img_data);
   auto *hb_mem_addr = reinterpret_cast<uint8_t *>(mem->virAddr);
   int copy_w = std::min(in_img_width, scaled_img_width);

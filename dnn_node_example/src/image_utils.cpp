@@ -25,7 +25,9 @@
 
 int ImageUtils::Render(
     const std::shared_ptr<hobot::dnn_node::NV12PyramidInput> &pyramid,
-    const ai_msgs::msg::PerceptionTargets::UniquePtr &ai_msg) {
+    const ai_msgs::msg::PerceptionTargets::UniquePtr &ai_msg,
+    const int img_h,
+    const int img_w) {
   if (!pyramid || !ai_msg) return -1;
 
   char *y_img = reinterpret_cast<char *>(pyramid->y_vir_addr);
@@ -38,8 +40,9 @@ int ImageUtils::Render(
   memcpy(buf, y_img, img_y_size);
   memcpy(buf + img_y_size, uv_img, img_uv_size);
   cv::Mat nv12(height * 3 / 2, width, CV_8UC1, buf);
-  cv::Mat mat;
-  cv::cvtColor(nv12, mat, CV_YUV2BGR_NV12);
+  cv::Mat tmp;
+  cv::cvtColor(nv12, tmp, CV_YUV2BGR_NV12);
+  cv::Mat mat = tmp(cv::Rect(0, 0, img_w, img_h));
   delete[] buf;
 
   RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),

@@ -1,0 +1,13 @@
+{
+	"model_file": "/opt/hobot/model/x5/basic/yolov8_seg_640x640_nv12.bin",
+	"dnn_Parser": "yolov8_seg",
+	"model_output_count": 10,
+	"reg_max": 16,
+ 	"num_mask": 32,
+	"class_num": 80,
+	"cls_names_list": "config/coco.list",
+ 	"strides": [8, 16, 32],
+	"score_threshold": 0.4,
+	"nms_threshold": 0.5,
+	"nms_top_k": 5000
+}

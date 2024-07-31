@@ -58,7 +58,8 @@ enum class DnnParserType {
   SSD_PARSER,
   EFFICIENTDET_PARSER,
   FCOS_PARSER,
-  UNET_PARSER
+  UNET_PARSER,
+  YOLOV8_SEG_PARSER,          // 对应dnn_node中yolov8_seg的output_parser算法
   /*define more*/
 };
 
@@ -75,10 +76,12 @@ struct DnnExampleOutput : public DnnNodeOutput {
   struct timespec preprocess_timespec_end;
 
   // 订阅到的图像数据和模型输入分辨率，unet算法后处理使用
-  int img_w = 0;
-  int img_h = 0;
-  int model_w = 0;
-  int model_h = 0;
+  int img_w = 0; // 原始图像的w
+  int img_h = 0; // 原始图像的h
+  int model_w = 0; // 模型输入的w
+  int model_h = 0; // 模型输入的h
+  int resized_w = 0; // 经过resize后图像的w
+  int resized_h = 0; // 经过resize后图像的w
 };
 
 class DnnExampleNode : public DnnNode {

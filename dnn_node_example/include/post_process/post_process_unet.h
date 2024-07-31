@@ -43,7 +43,7 @@ ai_msgs::msg::PerceptionTargets::UniquePtr PostProcess(
     int model_h,
     bool dump_render_img);
 
-int RenderUnet(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& node_output,
+int RenderSeg(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& node_output,
                 Parsing& seg);
 
 }

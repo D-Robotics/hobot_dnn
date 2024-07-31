@@ -283,8 +283,9 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
   | multitask_body_kps_960x544.hbm         | 检测模型 | x3/x5/x86 | 输出检测到body检测框和人体kps指标点      | ![image](./render/body_kps.jpeg)      |
   | mobilenetv2_224x224_nv12.bin           | 分类模型 | x3/x5/x86 | 输出置信度最大的分类结果                 | ![image](./render/mobilenetv2.jpeg)   |
   | mobilenet_unet_1024x2048_nv12.bin      | 分割模型 | x3/x5/x86 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)          |
+  | yolov8_seg_672x672_nv12                | 分割模型 | x5/x86 | 实例分割，输出检测到的物体和对应的像素      | ![image](./render/yolov8seg.jpeg)      |
 
-  "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有`"yolov2","yolov3","yolov5","yolov5x","yolov8","yolov10","kps_parser","classification","ssd","efficient_det","fcos","unet"`。
+  "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有`"yolov2","yolov3","yolov5","yolov5x","yolov8","yolov10","kps_parser","classification","ssd","efficient_det","fcos","unet", "yolov8seg"`。
   "model_output_count"为模型输出branch个数。
 
 - 分割模型算法暂时只支持本地图片回灌，无web效果展示
