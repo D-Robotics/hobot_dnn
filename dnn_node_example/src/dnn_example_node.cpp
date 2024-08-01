@@ -546,10 +546,6 @@ int DnnExampleNode::PostProcess(
   // 3.3 发布分割AI消息
   auto &seg = det_result->perception.seg;
   if (seg.height != 0 && seg.width != 0) {
-    if (dump_render_img_) {
-      hobot::dnn_node::parser_unet::RenderSeg(node_output, seg);
-    }
-
     ai_msgs::msg::Capture capture;
     capture.features.swap(seg.data);
     capture.img.height = seg.valid_h;
