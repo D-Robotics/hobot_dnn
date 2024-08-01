@@ -493,6 +493,8 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
     auto mask = result.mask;
     auto box = result.bbox;
 
+    perception.det.emplace_back(result.id, result.score, result.bbox, result.class_name);
+
     int x1_crop = static_cast<int>(box.xmin * proto_w_ratio);
     int y1_crop = static_cast<int>(box.ymin * proto_h_ratio);
     int x2_crop = static_cast<int>(box.xmax * proto_w_ratio);

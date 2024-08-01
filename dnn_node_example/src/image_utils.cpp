@@ -48,13 +48,8 @@ int ImageUtils::Render(
   RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),
               "target size: %d",
               ai_msg->targets.size());
-  bool hasRois = false;
   for (size_t idx = 0; idx < ai_msg->targets.size(); idx++) {
     const auto &target = ai_msg->targets.at(idx);
-    if (target.rois.empty()) {
-      continue;
-    }
-    hasRois = true;
     RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),
                 "target type: %s, rois.size: %d",
                 target.type.c_str(),
@@ -95,13 +90,33 @@ int ImageUtils::Render(
         cv::circle(mat, cv::Point(pt.x, pt.y), 3, color, 3);
       }
     }
+
+    if (!target.captures.empty()) {
+      float alpha_f = 0.5;
+      for (auto capture: target.captures) {
+        int parsing_width = capture.img.width;
+        int parsing_height = capture.img.height;
+        cv::Mat parsing_img(parsing_height, parsing_width, CV_8UC3);
+        uint8_t *parsing_img_ptr = parsing_img.ptr<uint8_t>();
+
+        for (int h = 0; h < parsing_height; ++h) {
+          for (int w = 0; w < parsing_width; ++w) {
+            auto id = static_cast<size_t>(capture.features[h * parsing_width + w]);
+            *parsing_img_ptr++ = bgr_putpalette[(id * 3) % 19];
+            *parsing_img_ptr++ = bgr_putpalette[(id * 3 + 1) % 19];
+            *parsing_img_ptr++ = bgr_putpalette[(id * 3 + 2) % 19];
+          }
+        }
+
+        cv::resize(parsing_img, parsing_img, mat.size(), 0, 0);
+        // alpha blending
+        cv::Mat dst;
+        addWeighted(mat, alpha_f, parsing_img, 1 - alpha_f, 0.0, dst);
+        mat = std::move(dst);
+      }
+    }
   }
 
-  if (!hasRois) {
-    RCLCPP_WARN(rclcpp::get_logger("ImageUtils"),
-                "Frame has no roi, skip the rendering");
-    return 0;
-  }
   std::string saving_path = "render_" + ai_msg->header.frame_id + "_" +
                             std::to_string(ai_msg->header.stamp.sec) + "_" +
                             std::to_string(ai_msg->header.stamp.nanosec) +

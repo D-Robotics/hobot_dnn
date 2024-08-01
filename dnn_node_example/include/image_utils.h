@@ -35,6 +35,12 @@ using hobot::dnn_node::NV12PyramidInput;
 #define ALIGN_16(w) ALIGNED_2E(w, 16U)
 #define ALIGN_64(w) ALIGNED_2E(w, 64U)
 
+static uint8_t bgr_putpalette[] = {
+    128, 64,  128, 244, 35,  232, 70,  70,  70,  102, 102, 156, 190, 153, 153,
+    153, 153, 153, 250, 170, 30,  220, 220, 0,   107, 142, 35,  152, 251, 152,
+    0,   130, 180, 220, 20,  60,  255, 0,   0,   0,   0,   142, 0,   0,   70,
+    0,   60,  100, 0,   80,  100, 0,   0,   230, 119, 11,  32};
+
 static std::vector<cv::Scalar> colors{
     cv::Scalar(255, 0, 0),    // red
     cv::Scalar(255, 255, 0),  // yellow
