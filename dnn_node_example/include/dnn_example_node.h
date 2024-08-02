@@ -18,6 +18,7 @@
 
 #include "ai_msgs/msg/capture_targets.hpp"
 #include "ai_msgs/msg/perception_targets.hpp"
+#include "ai_msgs/msg/perception_info.hpp"
 #include "cv_bridge/cv_bridge.h"
 #include "dnn_node/dnn_node.h"
 #include "dnn_node/util/image_proc.h"
@@ -137,6 +138,13 @@ class DnnExampleNode : public DnnNode {
   std::string msg_pub_topic_name_ = "hobot_dnn_detection";
   rclcpp::Publisher<ai_msgs::msg::PerceptionTargets>::SharedPtr msg_publisher_ =
       nullptr;
+  // 发布感知结果信息，如感知结果对应的图像分辨率，支持的类别等
+  std::string info_msg_pub_topic_name_;
+  rclcpp::Publisher<ai_msgs::msg::PerceptionInfo>::SharedPtr info_msg_publisher_ =
+  nullptr;
+  ai_msgs::msg::PerceptionInfo::SharedPtr perception_info_msg_ = nullptr;
+  std::shared_ptr<rclcpp::TimerBase> info_msg_pub_timer_ = nullptr;
+  std::atomic_bool is_pub_info_ready_ = false;
 
   // 订阅图片消息的topic和订阅者
   // 共享内存模式
