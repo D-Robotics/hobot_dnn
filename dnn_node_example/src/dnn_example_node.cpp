@@ -107,7 +107,7 @@ int ResizeNV12Img(const char *in_img_data,
 
 DnnExampleNode::DnnExampleNode(const NodeOptions &options,
                               const std::string &node_name)
-    : DnnNode(node_name, options) {
+    : DnnNode(node_name, options), is_pub_info_ready_(false) {
   // 更新配置
   this->declare_parameter<int>("feed_type", feed_type_);
   this->declare_parameter<std::string>("image", image_file_);
@@ -132,6 +132,7 @@ DnnExampleNode::DnnExampleNode(const NodeOptions &options,
 
   ros_img_topic_name_ = this->declare_parameter("ros_img_topic_name", ros_img_topic_name_);
   sharedmem_img_topic_name_ = this->declare_parameter("sharedmem_img_topic_name", sharedmem_img_topic_name_);
+  info_msg_pub_topic_name_ = msg_pub_topic_name_ + "_info";
 
   {
     std::stringstream ss;
@@ -142,10 +143,14 @@ DnnExampleNode::DnnExampleNode(const NodeOptions &options,
        << "\n is_shared_mem_sub: " << is_shared_mem_sub_
        << "\n config_file: " << config_file
        << "\n msg_pub_topic_name: " << msg_pub_topic_name_
+       << "\n info_msg_pub_topic_name: " << info_msg_pub_topic_name_
        << "\n ros_img_topic_name: " << ros_img_topic_name_
        << "\n sharedmem_img_topic_name: " << sharedmem_img_topic_name_;
     RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
   }
+
+  perception_info_msg_ = std::make_shared<ai_msgs::msg::PerceptionInfo>();
+
   // 加载配置文件config_file
   if (LoadConfig() < 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Load config fail!");
@@ -193,6 +198,16 @@ DnnExampleNode::DnnExampleNode(const NodeOptions &options,
               msg_pub_topic_name_.c_str());
   msg_publisher_ = this->create_publisher<ai_msgs::msg::PerceptionTargets>(
       msg_pub_topic_name_, 10);
+  info_msg_publisher_ = this->create_publisher<ai_msgs::msg::PerceptionInfo>(
+      info_msg_pub_topic_name_, 10);
+  info_msg_pub_timer_ = this->create_wall_timer(
+      std::chrono::milliseconds(1000), [this](){
+        if (perception_info_msg_ && info_msg_publisher_ && is_pub_info_ready_ &&
+            info_msg_publisher_->get_subscription_count() > 0) {
+                perception_info_msg_->header.stamp = rclcpp::Clock().now();
+                info_msg_publisher_->publish(*perception_info_msg_);
+            }
+      });
 
   if (static_cast<int>(DnnFeedType::FROM_LOCAL) == feed_type_) {
     // 本地图片回灌
@@ -345,6 +360,30 @@ int DnnExampleNode::LoadConfig() {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
                    "Load %s Parser config file fail",
                    str_parser.data());
+      return -1;
+    }
+  }
+  
+  if (document.HasMember("cls_names_list")) {
+    if (!perception_info_msg_) {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Invalid perception info msg");
+      return -1;
+    }
+    std::string cls_name_file = document["cls_names_list"].GetString();
+    std::ifstream fi(cls_name_file);
+    if (fi) {
+      perception_info_msg_->class_names.clear();
+      std::string line;
+      while (std::getline(fi, line)) {
+        perception_info_msg_->class_names.push_back(line);
+      }
+      RCLCPP_WARN(this->get_logger(), "Load [%d] class types from file [%s]",
+        perception_info_msg_->class_names.size(), cls_name_file.c_str());
+    } else {
+      RCLCPP_ERROR(this->get_logger(),
+                  "can not open cls name file: %s",
+                  cls_name_file.c_str());
       return -1;
     }
   }
@@ -581,12 +620,19 @@ int DnnExampleNode::PostProcess(
     ImageUtils::Render(parser_output->pyramid, pub_data, parser_output->resized_h, parser_output->resized_w);
   }
 
+  // 使用resize后的分辨率作为感知结果的分辨率
+  perception_info_msg_->height = parser_output->resized_h;
+  perception_info_msg_->width = parser_output->resized_w;
+
   if (parser_output->ratio != 1.0) {
     RCLCPP_DEBUG_STREAM(get_logger(),
       "ratio:" << parser_output->ratio
       << ", img w:" << parser_output->img_w
       << ", img h:" << parser_output->img_h
       );
+    // 如果有坐标映射，使用原始图片的分辨率作为感知结果的分辨率
+    perception_info_msg_->height = parser_output->img_h;
+    perception_info_msg_->width = parser_output->img_w;
     // 前处理有对图片进行resize，需要将坐标映射到对应的订阅图片分辨率
     for (auto &target : pub_data->targets) {
       for (auto &roi : target.rois) {
@@ -611,6 +657,9 @@ int DnnExampleNode::PostProcess(
       }
     }
   }
+
+  // 所有数据准备好之后才允许发布
+  is_pub_info_ready_ = true;
 
   for (auto &target : pub_data->targets) {
     for (auto &roi : target.rois) {
