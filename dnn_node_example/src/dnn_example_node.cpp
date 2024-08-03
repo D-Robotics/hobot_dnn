@@ -146,14 +146,14 @@ DnnExampleNode::DnnExampleNode(const NodeOptions &options,
        << "\n info_msg_pub_topic_name: " << info_msg_pub_topic_name_
        << "\n ros_img_topic_name: " << ros_img_topic_name_
        << "\n sharedmem_img_topic_name: " << sharedmem_img_topic_name_;
-    RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+    RCLCPP_WARN(this->get_logger(), "%s", ss.str().c_str());
   }
 
   perception_info_msg_ = std::make_shared<ai_msgs::msg::PerceptionInfo>();
 
   // 加载配置文件config_file
   if (LoadConfig() < 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Load config fail!");
+    RCLCPP_ERROR(this->get_logger(), "Load config fail!");
     rclcpp::shutdown();
     return;
   }
@@ -162,12 +162,12 @@ DnnExampleNode::DnnExampleNode(const NodeOptions &options,
     ss << "Parameter:"
        << "\n model_file_name: " << model_file_name_
        << "\n model_name: " << model_name_;
-    RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+    RCLCPP_WARN(this->get_logger(), "%s", ss.str().c_str());
   }
 
   // 使用基类接口初始化，加载模型
   if (Init() != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Init failed!");
+    RCLCPP_ERROR(this->get_logger(), "Init failed!");
     rclcpp::shutdown();
     return;
   }
@@ -175,25 +175,25 @@ DnnExampleNode::DnnExampleNode(const NodeOptions &options,
   // 未指定模型名，从加载的模型中查询出模型名
   if (model_name_.empty()) {
     if (!GetModel()) {
-      RCLCPP_ERROR(rclcpp::get_logger("example"), "Get model fail.");
+      RCLCPP_ERROR(this->get_logger(), "Get model fail.");
     } else {
       model_name_ = GetModel()->GetName();
-      RCLCPP_WARN(rclcpp::get_logger("example"), "Get model name: %s from load model.", model_name_.c_str());
+      RCLCPP_WARN(this->get_logger(), "Get model name: %s from load model.", model_name_.c_str());
     }
   }
 
   // 加载模型后查询模型输入分辨率
   if (GetModelInputSize(0, model_input_width_, model_input_height_) < 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Get model input size fail!");
+    RCLCPP_ERROR(this->get_logger(), "Get model input size fail!");
   } else {
-    RCLCPP_INFO(rclcpp::get_logger("example"),
+    RCLCPP_INFO(this->get_logger(),
                 "The model input width is %d and height is %d",
                 model_input_width_,
                 model_input_height_);
   }
 
   // 创建AI消息的发布者
-  RCLCPP_WARN(rclcpp::get_logger("example"),
+  RCLCPP_WARN(this->get_logger(),
               "Create ai msg publisher with topic_name: %s",
               msg_pub_topic_name_.c_str());
   msg_publisher_ = this->create_publisher<ai_msgs::msg::PerceptionTargets>(
@@ -211,18 +211,18 @@ DnnExampleNode::DnnExampleNode(const NodeOptions &options,
 
   if (static_cast<int>(DnnFeedType::FROM_LOCAL) == feed_type_) {
     // 本地图片回灌
-    RCLCPP_INFO(rclcpp::get_logger("example"),
+    RCLCPP_INFO(this->get_logger(),
                 "Dnn node feed with local image: %s",
                 image_file_.c_str());
     FeedFromLocal();
   } 
   else if (static_cast<int>(DnnFeedType::FROM_SUB) == feed_type_) {
     // 创建图片消息的订阅者
-    RCLCPP_INFO(rclcpp::get_logger("example"),
+    RCLCPP_INFO(this->get_logger(),
                 "Dnn node feed with subscription");
     if (is_shared_mem_sub_) {
 #ifdef SHARED_MEM_ENABLED
-      RCLCPP_WARN(rclcpp::get_logger("example"),
+      RCLCPP_WARN(this->get_logger(),
                   "Create img hbmem_subscription with topic_name: %s",
                   sharedmem_img_topic_name_.c_str());
       sharedmem_img_subscription_ =
@@ -233,10 +233,10 @@ DnnExampleNode::DnnExampleNode(const NodeOptions &options,
                         this,
                         std::placeholders::_1));
 #else
-      RCLCPP_ERROR(rclcpp::get_logger("example"), "Unsupport shared mem");
+      RCLCPP_ERROR(this->get_logger(), "Unsupport shared mem");
 #endif
     } else {
-      RCLCPP_WARN(rclcpp::get_logger("example"),
+      RCLCPP_WARN(this->get_logger(),
                   "Create img subscription with topic_name: %s",
                   ros_img_topic_name_.c_str());
       ros_img_subscription_ =
@@ -248,7 +248,7 @@ DnnExampleNode::DnnExampleNode(const NodeOptions &options,
     }
   } else {
     RCLCPP_ERROR(
-        rclcpp::get_logger("example"), "Invalid feed_type:%d", feed_type_);
+        this->get_logger(), "Invalid feed_type:%d", feed_type_);
     rclcpp::shutdown();
     return;
   }
@@ -258,7 +258,7 @@ DnnExampleNode::~DnnExampleNode() {}
 
 int DnnExampleNode::LoadConfig() {
   if (config_file.empty()) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"),
+    RCLCPP_ERROR(this->get_logger(),
                  "Config file [%s] is empty!",
                  config_file.data());
     return -1;
@@ -266,7 +266,7 @@ int DnnExampleNode::LoadConfig() {
   // Parsing config
   std::ifstream ifs(config_file.c_str());
   if (!ifs) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"),
+    RCLCPP_ERROR(this->get_logger(),
                  "Read config file [%s] fail!",
                  config_file.data());
     return -1;
@@ -275,7 +275,7 @@ int DnnExampleNode::LoadConfig() {
   rapidjson::Document document;
   document.ParseStream(isw);
   if (document.HasParseError()) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"),
+    RCLCPP_ERROR(this->get_logger(),
                  "Parsing config file %s failed",
                  config_file.data());
     return -1;
@@ -314,13 +314,13 @@ int DnnExampleNode::LoadConfig() {
         std::string dequanti_file = document["dequanti_file"].GetString();
         if (hobot::dnn_node::parser_efficientdet::LoadDequantiFile(
                 dequanti_file) < 0) {
-          RCLCPP_WARN(rclcpp::get_logger("example"),
+          RCLCPP_WARN(this->get_logger(),
                       "Load efficientdet dequanti file [%s] fail",
                       dequanti_file.data());
           return -1;
         }
       } else {
-        RCLCPP_WARN(rclcpp::get_logger("example"),
+        RCLCPP_WARN(this->get_logger(),
                     "classification file is not set");
       }
 #endif
@@ -353,11 +353,11 @@ int DnnExampleNode::LoadConfig() {
       ss << "Error! Invalid parser: " << str_parser
          << " . Only yolov2, yolov3, yolov5, yolov5x, yolov8, yolov10, ssd, fcos"
          << " efficient_det, classification, unet, yolov8-seg are supported";
-      RCLCPP_ERROR(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+      RCLCPP_ERROR(this->get_logger(), "%s", ss.str().c_str());
       return -3;
     }
     if (ret < 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("example"),
+      RCLCPP_ERROR(this->get_logger(),
                    "Load %s Parser config file fail",
                    str_parser.data());
       return -1;
@@ -392,7 +392,7 @@ int DnnExampleNode::LoadConfig() {
 }
 
 int DnnExampleNode::SetNodePara() {
-  RCLCPP_INFO(rclcpp::get_logger("example"), "Set node para.");
+  RCLCPP_INFO(this->get_logger(), "Set node para.");
   if (!dnn_node_para_ptr_) {
     return -1;
   }
@@ -402,7 +402,7 @@ int DnnExampleNode::SetNodePara() {
       hobot::dnn_node::ModelTaskType::ModelInferType;
   dnn_node_para_ptr_->task_num = task_num_;
 
-  RCLCPP_WARN(rclcpp::get_logger("example"),
+  RCLCPP_WARN(this->get_logger(),
               "model_file_name_: %s, task_num: %d",
               model_file_name_.data(),
               dnn_node_para_ptr_->task_num);
@@ -426,7 +426,7 @@ int DnnExampleNode::PostProcess(
     ss << "Output from frame_id: " << parser_output->msg_header->frame_id
        << ", stamp: " << parser_output->msg_header->stamp.sec << "."
        << parser_output->msg_header->stamp.nanosec;
-    RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+    RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
   }
 
   // 校验算法输出是否有效
@@ -506,18 +506,18 @@ int DnnExampleNode::PostProcess(
                                                             det_result);
       break;
     default:
-      RCLCPP_ERROR(rclcpp::get_logger("example"), "Inlvaid parser: %d", parser);
+      RCLCPP_ERROR(this->get_logger(), "Inlvaid parser: %d", parser);
       return -1;
   }
 
   if (parse_ret < 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Parse fail");
+    RCLCPP_ERROR(this->get_logger(), "Parse fail");
     return -1;
   }
 
   // 3. 创建用于发布的AI消息
   if (!msg_publisher_) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid msg_publisher_");
+    RCLCPP_ERROR(this->get_logger(), "Invalid msg_publisher_");
     return -1;
   }
   ai_msgs::msg::PerceptionTargets::UniquePtr pub_data(
@@ -725,7 +725,7 @@ int DnnExampleNode::PostProcess(
 
     if (parser_output) {
       // Output time delay info
-      RCLCPP_DEBUG_STREAM(rclcpp::get_logger("example"),
+      RCLCPP_DEBUG_STREAM(this->get_logger(),
         "frame_id: " << parser_output->msg_header->frame_id
         << ", stamp: " << parser_output->msg_header->stamp.sec << "."
         << parser_output->msg_header->stamp.nanosec
@@ -746,7 +746,7 @@ int DnnExampleNode::PostProcess(
 
     // 如果当前帧有更新统计信息，输出统计信息
     if (node_output->rt_stat->fps_updated) {
-      RCLCPP_WARN(rclcpp::get_logger("example"),
+      RCLCPP_WARN(this->get_logger(),
                   "Sub img fps: %.2f, Smart fps: %.2f, infer time ms: %d, "
                   "post process time ms: %d",
                   node_output->rt_stat->input_fps,
@@ -764,7 +764,7 @@ int DnnExampleNode::PostProcess(
 int DnnExampleNode::FeedFromLocal() {
   if (access(image_file_.c_str(), R_OK) == -1) {
     RCLCPP_ERROR(
-        rclcpp::get_logger("example"), "Image: %s not exist!", image_file_.c_str());
+        this->get_logger(), "Image: %s not exist!", image_file_.c_str());
     return -1;
   }
   auto dnn_output = std::make_shared<DnnExampleOutput>();
@@ -782,7 +782,7 @@ int DnnExampleNode::FeedFromLocal() {
         model_input_height_, 
         model_input_width_);
     if (!pyramid) {
-      RCLCPP_ERROR(rclcpp::get_logger("example"),
+      RCLCPP_ERROR(this->get_logger(),
                    "Get Nv12 pym fail with image: %s",
                    image_file_.c_str());
       return -1;
@@ -812,7 +812,7 @@ int DnnExampleNode::FeedFromLocal() {
         model_input_height_,
         model_input_width_);
     if (!pyramid) {
-      RCLCPP_ERROR(rclcpp::get_logger("example"),
+      RCLCPP_ERROR(this->get_logger(),
                    "Get Nv12 pym fail with image: %s",
                    image_file_.c_str());
       return -1;
@@ -822,7 +822,7 @@ int DnnExampleNode::FeedFromLocal() {
     // 读取bin文件送模型推理
   } else {
     RCLCPP_ERROR(
-        rclcpp::get_logger("example"), "Invalid image type: %d", image_type_);
+        this->get_logger(), "Invalid image type: %d", image_type_);
     return -1;
   }
 
@@ -844,7 +844,7 @@ int DnnExampleNode::FeedFromLocal() {
 
   // 4. 处理预测结果，如渲染到图片或者发布预测结果
   if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Run predict failed!");
+    RCLCPP_ERROR(this->get_logger(), "Run predict failed!");
     return ret;
   }
   return 0;
@@ -853,7 +853,7 @@ int DnnExampleNode::FeedFromLocal() {
 void DnnExampleNode::RosImgProcess(
     const sensor_msgs::msg::Image::ConstSharedPtr img_msg) {
   if (!img_msg) {
-    RCLCPP_DEBUG(rclcpp::get_logger("example"), "Get img failed");
+    RCLCPP_DEBUG(this->get_logger(), "Get img failed");
     return;
   }
 
@@ -870,7 +870,7 @@ void DnnExampleNode::RosImgProcess(
      << ", stamp: " << img_msg->header.stamp.sec << "_"
      << img_msg->header.stamp.nanosec
      << ", data size: " << img_msg->data.size();
-  RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+  RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
 
   // dump recved img msg
   // std::ofstream ofs("img_" + img_msg->header.frame_id +
@@ -899,7 +899,7 @@ void DnnExampleNode::RosImgProcess(
       auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
                           tp_now - tp_start)
                           .count();
-      RCLCPP_DEBUG(rclcpp::get_logger("example"),
+      RCLCPP_DEBUG(this->get_logger(),
                    "after cvtColorForDisplay cost ms: %d",
                    interval);
     }
@@ -923,7 +923,7 @@ void DnnExampleNode::RosImgProcess(
       auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
                           tp_now - tp_start)
                           .count();
-      RCLCPP_DEBUG(rclcpp::get_logger("example"),
+      RCLCPP_DEBUG(this->get_logger(),
                    "after cvtColorForDisplay cost ms: %d",
                    interval);
     }
@@ -977,7 +977,7 @@ void DnnExampleNode::RosImgProcess(
   }
 
   if (!pyramid) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Get Nv12 pym fail");
+    RCLCPP_ERROR(this->get_logger(), "Get Nv12 pym fail");
     return;
   }
 
@@ -986,7 +986,7 @@ void DnnExampleNode::RosImgProcess(
     auto interval =
         std::chrono::duration_cast<std::chrono::milliseconds>(tp_now - tp_start)
             .count();
-    RCLCPP_DEBUG(rclcpp::get_logger("example"),
+    RCLCPP_DEBUG(this->get_logger(),
                  "after GetNV12Pyramid cost ms: %d",
                  interval);
   }
@@ -1010,7 +1010,7 @@ void DnnExampleNode::RosImgProcess(
 
   // 4. 开始预测
   if (Run(inputs, dnn_output, nullptr) != 0) {
-    RCLCPP_INFO(rclcpp::get_logger("example"), "Run predict failed!");
+    RCLCPP_INFO(this->get_logger(), "Run predict failed!");
     return;
   }
 }
@@ -1036,7 +1036,7 @@ void DnnExampleNode::SharedMemImgProcess(
      << ", step: " << img_msg->step << ", index: " << img_msg->index
      << ", stamp: " << img_msg->time_stamp.sec << "_"
      << img_msg->time_stamp.nanosec << ", data size: " << img_msg->data_size;
-  RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+  RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
 
   rclcpp::Time msg_ts = img_msg->time_stamp;
   rclcpp::Duration dura = this->now() - msg_ts;
@@ -1099,7 +1099,7 @@ void DnnExampleNode::SharedMemImgProcess(
           model_input_width_);
     }
   } else {
-    RCLCPP_ERROR(rclcpp::get_logger("example"),
+    RCLCPP_ERROR(this->get_logger(),
                  "Unsupported img encoding: %s, only nv12 img encoding is "
                  "supported for shared mem.",
                  img_msg->encoding.data());
@@ -1114,7 +1114,7 @@ void DnnExampleNode::SharedMemImgProcess(
 
   // 生成pyramid数据失败
   if (!pyramid) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Get Nv12 pym fail");
+    RCLCPP_ERROR(this->get_logger(), "Get Nv12 pym fail");
     return;
   }
 
@@ -1123,7 +1123,7 @@ void DnnExampleNode::SharedMemImgProcess(
     auto interval =
         std::chrono::duration_cast<std::chrono::milliseconds>(tp_now - tp_start)
             .count();
-    RCLCPP_DEBUG(rclcpp::get_logger("example"),
+    RCLCPP_DEBUG(this->get_logger(),
                  "after GetNV12Pyramid cost ms: %d",
                  interval);
   }
@@ -1149,7 +1149,7 @@ void DnnExampleNode::SharedMemImgProcess(
 
   // 3. 开始预测
   if (Run(inputs, dnn_output, nullptr) != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Run predict failed!");
+    RCLCPP_ERROR(this->get_logger(), "Run predict failed!");
     return;
   }
 
@@ -1159,7 +1159,7 @@ void DnnExampleNode::SharedMemImgProcess(
         std::chrono::duration_cast<std::chrono::milliseconds>(tp_now - tp_start)
             .count();
     RCLCPP_DEBUG(
-        rclcpp::get_logger("example"), "after Predict cost ms: %d", interval);
+        this->get_logger(), "after Predict cost ms: %d", interval);
   }
 }
 #endif
