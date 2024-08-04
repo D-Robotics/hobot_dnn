@@ -103,20 +103,19 @@ link_directories(
   ${SYS_ROOT}/usr/lib/
 )
 
-add_library(${PROJECT_NAME}_plugin SHARED
+add_library(${PROJECT_NAME}_component SHARED
   src/dnn_example_node.cpp
   src/image_utils.cpp
   src/post_process/post_process_unet.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}_plugin
+rclcpp_components_register_node(${PROJECT_NAME}_component
   PLUGIN "DnnExampleNode"
   EXECUTABLE example
 )
-set(node_plugins "${node_plugins}DnnExampleNode;$<TARGET_FILE:${PROJECT_NAME}_plugin>\n")
 
 ament_target_dependencies(
-  ${PROJECT_NAME}_plugin
+  ${PROJECT_NAME}_component
   rclcpp
   rclcpp_components
   dnn_node
@@ -128,7 +127,7 @@ ament_target_dependencies(
 
 if (${SHARED_MEM})
   ament_target_dependencies(
-    ${PROJECT_NAME}_plugin
+    ${PROJECT_NAME}_component
     hbm_img_msgs
   )
 endif ()
@@ -139,7 +138,7 @@ ${PROJECT_SOURCE_DIR}
 
 # Install executables
 install(
-  TARGETS ${PROJECT_NAME}_plugin
+  TARGETS ${PROJECT_NAME}_component
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
