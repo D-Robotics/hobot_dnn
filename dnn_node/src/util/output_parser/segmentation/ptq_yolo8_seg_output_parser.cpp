@@ -120,6 +120,7 @@ float score_threshold_ = 0.4;
 static bool is_performance_ = false;
 float nms_threshold_ = 0.5;
 int nms_top_k_ = 5000;
+bool output_roi_ = true;
 
 int InitClassNum(const int &class_num) {
   if(class_num > 0){
@@ -248,6 +249,9 @@ int LoadConfig(const rapidjson::Document &document) {
   }
   if (document.HasMember("nms_top_k")) {
     nms_top_k_ = document["nms_top_k"].GetInt();
+  }
+  if (document.HasMember("output_roi")) {
+    output_roi_ = document["output_roi"].GetBool();
   }
 
   return 0;
@@ -493,7 +497,12 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
     auto mask = result.mask;
     auto box = result.bbox;
 
-    perception.det.emplace_back(result.id, result.score, result.bbox, result.class_name);
+    if (output_roi_) {
+      perception.det.emplace_back(result.id, result.score, result.bbox, result.class_name);
+    } else {
+      RCLCPP_WARN_ONCE(rclcpp::get_logger("Yolo8_seg_parser"),
+        "Roi output is not enabled");
+    }
 
     int x1_crop = static_cast<int>(box.xmin * proto_w_ratio);
     int y1_crop = static_cast<int>(box.ymin * proto_h_ratio);
