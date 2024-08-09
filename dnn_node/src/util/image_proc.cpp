@@ -519,6 +519,8 @@ std::shared_ptr<DNNTensor> ImageProc::GetBGRTensorFromBGR(const std::string &ima
   int src_elem_size = 1;
   switch (tensor_properties.tensorType)
   {
+    case HB_DNN_IMG_TYPE_RGB:
+    case HB_DNN_IMG_TYPE_BGR:
     case HB_DNN_TENSOR_TYPE_U8: src_elem_size = 1; mat_tmp = pad_frame; break;
     case HB_DNN_TENSOR_TYPE_F32: {
       src_elem_size = 4; 
@@ -618,6 +620,8 @@ std::shared_ptr<DNNTensor> ImageProc::GetBGRTensorFromBGRImg(
   int src_elem_size = 1;
   switch (tensor_properties.tensorType)
   {
+    case HB_DNN_IMG_TYPE_RGB:
+    case HB_DNN_IMG_TYPE_BGR:
     case HB_DNN_TENSOR_TYPE_U8: src_elem_size = 1; mat_tmp = pad_frame; break;
     case HB_DNN_TENSOR_TYPE_F32: {
       src_elem_size = 4; 
