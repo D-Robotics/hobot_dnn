@@ -102,9 +102,10 @@ int ImageUtils::Render(
         for (int h = 0; h < parsing_height; ++h) {
           for (int w = 0; w < parsing_width; ++w) {
             auto id = static_cast<size_t>(capture.features[h * parsing_width + w]);
-            *parsing_img_ptr++ = bgr_putpalette[(id % 81) * 3];
-            *parsing_img_ptr++ = bgr_putpalette[(id % 81) * 3 + 1];
-            *parsing_img_ptr++ = bgr_putpalette[(id % 81) * 3 + 2];
+            id = id >= 80? (id % 80) + 1: id;
+            *parsing_img_ptr++ = bgr_putpalette[id * 3];
+            *parsing_img_ptr++ = bgr_putpalette[id * 3 + 1];
+            *parsing_img_ptr++ = bgr_putpalette[id * 3 + 2];
           }
         }
 

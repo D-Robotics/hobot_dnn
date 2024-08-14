@@ -61,6 +61,12 @@ int get_tensor_aligned_hw(std::shared_ptr<DNNTensor> tensor,
                           int *height,
                           int *width);
 
+void seg_background_adjust(int8_t *seg,
+                           float *data,
+                           int cur_id,
+                           int background_id,
+                           bool have_background);
+
 class Utils {
  public:
   static void GetRoiScale(float &scale_h,
