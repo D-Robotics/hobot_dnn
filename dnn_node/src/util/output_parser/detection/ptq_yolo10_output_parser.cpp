@@ -226,8 +226,14 @@ int LoadConfig(const rapidjson::Document &document) {
   if (document.HasMember("score_threshold")) {
     score_threshold_ = document["score_threshold"].GetFloat();
   }
+
+  score_threshold_ = -log(1 / score_threshold_ - 1);
+
   if (document.HasMember("top_k")) {
     top_k_ = document["top_k"].GetInt();
+  }
+  if (document.HasMember("is_performance")) {
+    is_performance_ = document["is_performance"].GetBool();
   }
 
   return 0;
@@ -236,11 +242,9 @@ int LoadConfig(const rapidjson::Document &document) {
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                 Perception &perception);
 
-double Dequanti(int32_t data,
-                int layer,
-                bool big_endian,
-                int offset,
-                hbDNNTensorProperties &properties);
+float DequantiScale(int32_t data,
+                    bool big_endian,
+                    float &scale_value);
 
 
 
@@ -264,42 +268,45 @@ void ParseTensor(std::shared_ptr<DNNTensor> clses,
   }
 
   auto *cls_data = reinterpret_cast<float *>(clses->sysMem[0].virAddr);
-  auto *box_data = reinterpret_cast<float *>(boxes->sysMem[0].virAddr);
+  auto *box_data = reinterpret_cast<int32_t *>(boxes->sysMem[0].virAddr);
+  auto *box_scale_data = reinterpret_cast<float *>(boxes->properties.scale.scaleData);
   for (int h = 0; h < height; ++h) {
     for (int w = 0; w < width; ++w) {
       float *cur_cls_data = cls_data;
-      float *cur_box_data = box_data;
+      int32_t *cur_box_data = box_data;
 
       cls_data += num_classes;
       box_data += reg_max * 4;
 
       int id = argmax(cur_cls_data, cur_cls_data + num_classes);
-      double confidence = 1 / (1 + std::exp(-cur_cls_data[id]));
 
-      if (confidence < score_threshold_) {
+      if (cur_cls_data[id] < score_threshold_) {
         continue;
       }
       
-      std::vector<double> decoded_boxes(4, 0);
-      for (int i = 0; i < 4; ++i) {
-        double sum = 0;
+      double confidence = 1 / (1 + std::exp(-cur_cls_data[id]));
+      float sum, distribute_score;
+      size_t box_id = 0;
+      std::vector<float> decoded_boxes(4, 0);
+      for (size_t i = 0; i < 4; ++i) {
+        sum = 0.;
         for (int reg = 0; reg < reg_max; ++reg) {
-          double distribute_score;
           if (is_performance_) {
-            distribute_score = fastExp(cur_box_data[i * reg_max + reg]);
+            distribute_score = fastExp(DequantiScale(cur_box_data[box_id], false, box_scale_data[box_id]));
           } else {
-            distribute_score = std::exp(cur_box_data[i * reg_max + reg]);
+            distribute_score = std::exp(DequantiScale(cur_box_data[box_id], false, box_scale_data[box_id]));
           }
           sum += distribute_score;
-          decoded_boxes[i] += distribute_score * (reg);
+          decoded_boxes[i] += distribute_score * reg;
+          ++box_id;
         }
         decoded_boxes[i] /= sum;
       }
 
-      double xmin = (w + 0.5 - decoded_boxes[0]) * stride;
-      double ymin = (h + 0.5 - decoded_boxes[1]) * stride;
-      double xmax = (w + 0.5 + decoded_boxes[2]) * stride;
-      double ymax = (h + 0.5 + decoded_boxes[3]) * stride;
+      float xmin = (w + 0.5 - decoded_boxes[0]) * stride;
+      float ymin = (h + 0.5 - decoded_boxes[1]) * stride;
+      float xmax = (w + 0.5 + decoded_boxes[2]) * stride;
+      float ymax = (h + 0.5 + decoded_boxes[3]) * stride;
 
       if (xmax <= 0 || ymax <= 0) {
         continue;
@@ -420,13 +427,11 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
   return 0;
 }
 
-double Dequanti(int32_t data,
-                int layer,
-                bool big_endian,
-                int offset,
-                hbDNNTensorProperties &properties) {
-  return static_cast<double>(r_int32(data, big_endian)) *
-         yolo10_config_.dequantize_scale[layer][offset];
+
+float DequantiScale(int32_t data,
+                    bool big_endian,
+                    float &scale_value) {
+  return static_cast<float>(r_int32(data, big_endian)) * scale_value;
 }
 
 }  // namespace parser_yolov10

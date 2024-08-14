@@ -76,6 +76,28 @@ int get_tensor_aligned_hw(std::shared_ptr<DNNTensor> tensor,
   return 0;
 }
 
+void seg_background_adjust(int8_t *seg,
+                           float *data,
+                           int cur_id,
+                           int background_id,
+                           bool have_background) {
+  if (have_background) {
+    if (cur_id == 0) {
+      *seg = static_cast<int8_t>(background_id);
+      *data = static_cast<float>(background_id);
+    } else if (cur_id == background_id) {
+      *seg = 0;
+      *data = 0.;
+    } else {
+      *seg = static_cast<int8_t>(cur_id);
+      *data = static_cast<float>(cur_id);
+    }
+  } else {
+    *seg = static_cast<int8_t>(cur_id + 1);
+    *data = static_cast<float>(cur_id + 1);
+  }
+}
+
 int32_t TensorUtils::GetTensorValidHWC(hbDNNTensorProperties *properties,
                                        int *valid_h,
                                        int *valid_w,
