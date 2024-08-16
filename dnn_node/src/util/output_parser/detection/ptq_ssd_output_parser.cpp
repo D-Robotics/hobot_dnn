@@ -107,7 +107,7 @@ int SsdAnchors(std::vector<Anchor> &anchors,
                int layer_height,
                int layer_width);
 
-int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
+int GetBboxAndScores(std::shared_ptr<DNNTensor> cls_tensor,
                      std::shared_ptr<DNNTensor> bbox_tensor,
                      std::vector<Detection> &dets,
                      std::vector<Anchor> &anchors,
@@ -194,17 +194,17 @@ int SsdAnchors(std::vector<Anchor> &anchors,
   return 0;
 }
 
-int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
+int GetBboxAndScores(std::shared_ptr<DNNTensor> cls_tensor,
                      std::shared_ptr<DNNTensor> bbox_tensor,
                      std::vector<Detection> &dets,
                      std::vector<Anchor> &anchors,
                      int class_num,
                      float cut_off_threshold) {
-  int *shape = c_tensor->properties.validShape.dimensionSize;
+  int *shape = cls_tensor->properties.validShape.dimensionSize;
   int32_t c_batch_size = shape[0];
   int h_idx, w_idx, c_idx;
   hobot::dnn_node::output_parser::get_tensor_hwc_index(
-      c_tensor, &h_idx, &w_idx, &c_idx);
+      cls_tensor, &h_idx, &w_idx, &c_idx);
 
   int32_t c_hnum = shape[h_idx];
   int32_t c_wnum = shape[w_idx];
@@ -214,7 +214,7 @@ int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
   shape = bbox_tensor->properties.validShape.dimensionSize;
   int32_t b_batch_size = shape[0];
   hobot::dnn_node::output_parser::get_tensor_hwc_index(
-      c_tensor, &h_idx, &w_idx, &c_idx);
+      cls_tensor, &h_idx, &w_idx, &c_idx);
 
   int32_t b_hnum = shape[h_idx];
   int32_t b_wnum = shape[w_idx];
@@ -222,98 +222,109 @@ int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
 
   RCLCPP_DEBUG(rclcpp::get_logger("SSDOutputParser"),
                "PostProcess c_wnum:%d c_hnum:%d c_cnum:%d b_wnum:%d b_hnum:%d "
-               "b_cnum: %d",
+               "b_cnum: %d anchor_num: %d",
                c_wnum,
                c_hnum,
                c_cnum,
                b_wnum,
                b_hnum,
-               b_cnum);
+               b_cnum,
+               anchor_num_per_pixel);
+
 
   assert(anchor_num_per_pixel == b_cnum / 4);
   assert(c_batch_size == b_batch_size && c_hnum == b_hnum && c_wnum == b_wnum);
   auto box_num = b_batch_size * b_hnum * b_wnum * anchor_num_per_pixel;
 
-  hbSysFlushMem(&(c_tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
-  auto *raw_cls_data = reinterpret_cast<float *>(c_tensor->sysMem[0].virAddr);
+  hbSysFlushMem(&(cls_tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
+  auto *cls_data = reinterpret_cast<int32_t *>(cls_tensor->sysMem[0].virAddr);
+  auto *cls_scale_data = reinterpret_cast<float *>(cls_tensor->properties.scale.scaleData);
+  int32_t cls_aligned = cls_tensor->properties.alignedShape.dimensionSize[c_idx];
 
   hbSysFlushMem(&(bbox_tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
-  auto *raw_box_data =
-      reinterpret_cast<float *>(bbox_tensor->sysMem[0].virAddr);
+  auto *box_data =
+      reinterpret_cast<int32_t *>(bbox_tensor->sysMem[0].virAddr);
+  auto *box_scale_data = reinterpret_cast<float *>(bbox_tensor->properties.scale.scaleData);
+  int32_t box_aligned = bbox_tensor->properties.alignedShape.dimensionSize[c_idx];
+  for (int h = 0; h < b_hnum; ++h) {
+    for (int w = 0; w < b_wnum; ++w) {
+      for (int i = 0; i < anchor_num_per_pixel; ++i) {
+        auto cur_cls_data = cls_data + i * class_num;
+        auto cur_cls_scale = cls_scale_data + i * class_num;
 
-  for (int i = 0; i < box_num; i++) {
-    uint32_t res_id_cur_anchor = i * class_num;
-    // get softmax sum
-    double sum = 0;
-    int max_id = 0;
-    // TODO(@d-robotics.cc): fastExp only affect the final score value
-    // confirm whether it affects the accuracy
-    double background_score;
-    if (is_performance_) {
-      background_score = fastExp(raw_cls_data[res_id_cur_anchor]);
-    } else {
-      background_score = std::exp(raw_cls_data[res_id_cur_anchor]);
-    }
+        double background_score;
+        if (is_performance_) {
+          background_score = fastExp(cur_cls_data[0] * cur_cls_scale[0]);
+        } else {
+          background_score = std::exp(cur_cls_data[0] * cur_cls_scale[0]);
+        }
+        double sum = 0;
+        int max_id = 0;
+        double max_score = 0;
+        for (int cls = 0; cls < class_num; ++cls) {
+          float cls_score;
+          if (is_performance_) {
+            cls_score = fastExp(cur_cls_data[cls] * cur_cls_scale[cls]);
+          } else {
+            cls_score = std::exp(cur_cls_data[cls] * cur_cls_scale[cls]);
+          }
+          sum += cls_score;
+          /* scores should be larger than background score, or else will not be
+          selected */
+          if (cls != 0 && cls_score > max_score && cls_score > background_score) {
+            max_id = cls - 1;
+            max_score = cls_score;
+          }
+        }
+        // get softmax score
+        max_score = max_score / sum;
+        
+        if (max_score < score_threshold_) {
+          continue;
+        }
 
-    double max_score = 0;
-    for (int cls = 0; cls < class_num; ++cls) {
-      float cls_score;
-      if (is_performance_) {
-        cls_score = fastExp(raw_cls_data[res_id_cur_anchor + cls]);
-      } else {
-        cls_score = std::exp(raw_cls_data[res_id_cur_anchor + cls]);
+        auto cur_box_data = box_data + i * 4;
+        auto cur_box_scale = box_scale_data + i * 4;
+        float dx = cur_box_data[0] * box_scale_data[0];
+        float dy = cur_box_data[1] * box_scale_data[1];
+        float dw = cur_box_data[2] * box_scale_data[2];
+        float dh = cur_box_data[3] * box_scale_data[3];
+
+        int anchor_id = h * b_wnum * anchor_num_per_pixel + w * anchor_num_per_pixel + i;
+        auto x_min = (anchors[anchor_id].cx - anchors[anchor_id].w / 2);
+        auto y_min = (anchors[anchor_id].cy - anchors[anchor_id].h / 2);
+        auto x_max = (anchors[anchor_id].cx + anchors[anchor_id].w / 2);
+        auto y_max = (anchors[anchor_id].cy + anchors[anchor_id].h / 2);
+
+        auto prior_w = x_max - x_min;
+        auto prior_h = y_max - y_min;
+        auto prior_center_x = (x_max + x_min) / 2;
+        auto prior_center_y = (y_max + y_min) / 2;
+        auto decode_x = ssd_config_.std[0] * dx * prior_w + prior_center_x;
+        auto decode_y = ssd_config_.std[1] * dy * prior_h + prior_center_y;
+        auto decode_w = std::exp(ssd_config_.std[2] * dw) * prior_w;
+        auto decode_h = std::exp(ssd_config_.std[3] * dh) * prior_h;
+
+        auto xmin = (decode_x - decode_w * 0.5);
+        auto ymin = (decode_y - decode_h * 0.5);
+        auto xmax = (decode_x + decode_w * 0.5);
+        auto ymax = (decode_y + decode_h * 0.5);
+
+        xmin = std::max(xmin, 0.0);
+        ymin = std::max(ymin, 0.0);
+
+        if (xmax <= 0 || ymax <= 0) continue;
+        if (xmin > xmax || ymin > ymax) continue;
+
+        Bbox bbox(xmin, ymin, xmax, ymax);
+        dets.emplace_back(static_cast<int>(max_id),
+                          max_score,
+                          bbox,
+                          ssd_config_.class_names[max_id].c_str());
       }
-      sum += cls_score;
-      /* scores should be larger than background score, or else will not be
-      selected */
-      if (cls != 0 && cls_score > max_score && cls_score > background_score) {
-        max_id = cls - 1;
-        max_score = cls_score;
-      }
+      cls_data += cls_aligned;
+      box_data += box_aligned;
     }
-    // get softmax score
-    max_score = max_score / sum;
-
-    if (max_score <= score_threshold_) {
-      continue;
-    }
-
-    int start = i * 4;
-    float dx = raw_box_data[start];
-    float dy = raw_box_data[start + 1];
-    float dw = raw_box_data[start + 2];
-    float dh = raw_box_data[start + 3];
-
-    auto x_min = (anchors[i].cx - anchors[i].w / 2);
-    auto y_min = (anchors[i].cy - anchors[i].h / 2);
-    auto x_max = (anchors[i].cx + anchors[i].w / 2);
-    auto y_max = (anchors[i].cy + anchors[i].h / 2);
-
-    auto prior_w = x_max - x_min;
-    auto prior_h = y_max - y_min;
-    auto prior_center_x = (x_max + x_min) / 2;
-    auto prior_center_y = (y_max + y_min) / 2;
-    auto decode_x = ssd_config_.std[0] * dx * prior_w + prior_center_x;
-    auto decode_y = ssd_config_.std[1] * dy * prior_h + prior_center_y;
-    auto decode_w = std::exp(ssd_config_.std[2] * dw) * prior_w;
-    auto decode_h = std::exp(ssd_config_.std[3] * dh) * prior_h;
-
-    auto xmin = (decode_x - decode_w * 0.5);
-    auto ymin = (decode_y - decode_h * 0.5);
-    auto xmax = (decode_x + decode_w * 0.5);
-    auto ymax = (decode_y + decode_h * 0.5);
-
-    xmin = std::max(xmin, 0.0);
-    ymin = std::max(ymin, 0.0);
-
-    if (xmax <= 0 || ymax <= 0) continue;
-    if (xmin > xmax || ymin > ymax) continue;
-
-    Bbox bbox(xmin, ymin, xmax, ymax);
-    dets.emplace_back(static_cast<int>(max_id),
-                      max_score,
-                      bbox,
-                      ssd_config_.class_names[max_id].c_str());
   }
   return 0;
 }
