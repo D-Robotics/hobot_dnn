@@ -85,7 +85,7 @@ struct DnnNodeRunTimeFpsStat {
 struct ThreadPool {
   hobot::CThreadPool msg_handle_;
   std::mutex msg_mutex_;
-  int msg_limit_count_ = 10;
+  int msg_limit_count_ = 1;
 };
 
 class DnnNodeImpl {

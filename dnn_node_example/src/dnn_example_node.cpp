@@ -842,7 +842,7 @@ int DnnExampleNode::FeedFromLocal() {
 
   uint32_t ret = 0;
   // 3. 开始预测
-  ret = Run(inputs, dnn_output, nullptr, true, -1, 20000);
+  ret = Run(inputs, dnn_output, nullptr);
 
   // 4. 处理预测结果，如渲染到图片或者发布预测结果
   if (ret != 0) {
@@ -1011,7 +1011,7 @@ void DnnExampleNode::RosImgProcess(
   }
 
   // 4. 开始预测
-  if (Run(inputs, dnn_output, nullptr, -1, 20000) != 0) {
+  if (Run(inputs, dnn_output, nullptr) != 0) {
     RCLCPP_INFO(this->get_logger(), "Run predict failed!");
     return;
   }
@@ -1150,7 +1150,7 @@ void DnnExampleNode::SharedMemImgProcess(
   dnn_output->preprocess_timespec_end = time_now;
 
   // 3. 开始预测
-  if (Run(inputs, dnn_output, nullptr, -1, 20000) != 0) {
+  if (Run(inputs, dnn_output, nullptr) != 0) {
     RCLCPP_ERROR(this->get_logger(), "Run predict failed!");
     return;
   }
