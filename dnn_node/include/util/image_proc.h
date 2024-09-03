@@ -217,6 +217,15 @@ class ImageProc {
   static int32_t BGRToNv12(cv::Mat &bgr_mat, cv::Mat &img_nv12);
 
   static int32_t Nv12ToBGR(const char *in_img_data, const int &in_img_height, const int &in_img_width, cv::Mat &bgr_mat);
+
+  static int32_t BGRToYUV444(cv::Mat &bgr_mat, cv::Mat &img_yuv444, int offset = 0);
+
+  static int32_t Nv12ToYUV444(cv::Mat &img_nv12, 
+                              const int &height, 
+                              const int &width,
+                              cv::Mat &img_yuv444, 
+                              int offset);
+
 };
 
 }  // namespace dnn_node

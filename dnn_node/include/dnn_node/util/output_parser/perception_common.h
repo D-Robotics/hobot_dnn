@@ -179,10 +179,19 @@ struct MaskResultInfo {
   std::vector<float> mask_info;
 };
 
+struct OpticalFlow {
+  std::vector<float> data;
+  int32_t width = 0; // 图像送入模型前经过resize的w
+  int32_t height = 0; // 图像送入模型前经过resize的h
+  int32_t valid_h = 0; // 最终输出的光流图的h
+  int32_t valid_w = 0; // 最终输出的光流图的w
+};
+
 struct Perception {
   // Perception data
   std::vector<Detection> det;
   std::vector<Classification> cls;
+  OpticalFlow flow;
   Parsing seg;
   MaskResultInfo mask;
   float h_base = 1;
@@ -194,6 +203,7 @@ struct Perception {
     CLS = (1 << 1),
     SEG = (1 << 2),
     MASK = (1 << 3),
+    FLOW = (1 << 4),
   } type;
 
   friend std::ostream &operator<<(std::ostream &os, Perception &perception) {
@@ -230,6 +240,18 @@ struct Perception {
           os << ",";
         }
         os << detection[i];
+      }
+    } else if (perception.type == Perception::FLOW) {
+      os << "In print" <<std::endl;
+      auto &flow = perception.flow;
+      size_t strides = flow.valid_h * flow.valid_w;
+      size_t x_offset = 0, y_offset = strides;
+      for (size_t i = 0; i < strides; i++) {
+        if (i != 0) {
+          os << ",";
+        }
+        os << "x_vector: " << flow.data[x_offset++]
+           << " y_vector: " << flow.data[y_offset++];
       }
     }
     os << "]";
