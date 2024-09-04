@@ -101,6 +101,7 @@ link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
   ${SYS_ROOT}/usr/lib/hbmedia/
   ${SYS_ROOT}/usr/lib/
+  ${SYS_ROOT}/usr/hobot/lib/
 )
 
 add_library(${PROJECT_NAME}_component SHARED

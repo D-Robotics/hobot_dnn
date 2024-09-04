@@ -85,6 +85,7 @@ include_directories(${SYS_ROOT}/usr/include)
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
   ${SYS_ROOT}/usr/lib/
+  ${SYS_ROOT}/usr/hobot/lib/
 )
  
 if(PLATFORM_X3)

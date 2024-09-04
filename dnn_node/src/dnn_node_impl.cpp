@@ -675,8 +675,7 @@ int DnnNodeImpl::Run(
                   "for this model!",
                   thread_pool_->msg_handle_.GetTaskNum(),
                   thread_pool_->msg_limit_count_);
-      // todo [20220622] 返回错误码告知用户推理失败原因
-      return -1;
+      return HB_DNN_TASK_NUM_EXCEED_LIMIT;
     }
 
     auto infer_task = [this,
