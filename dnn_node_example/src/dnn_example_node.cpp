@@ -752,7 +752,7 @@ int DnnExampleNode::PostProcess(
                   "post process time ms: %d",
                   node_output->rt_stat->input_fps,
                   node_output->rt_stat->output_fps,
-                  static_cast<int>(perf_postprocess.time_ms_duration),
+                  static_cast<int>(perf_preprocess.time_ms_duration),
                   node_output->rt_stat->infer_time_ms,
                   static_cast<int>(perf_postprocess.time_ms_duration));
     }
@@ -845,7 +845,7 @@ int DnnExampleNode::FeedFromLocal() {
   ret = Run(inputs, dnn_output, nullptr);
 
   // 4. 处理预测结果，如渲染到图片或者发布预测结果
-  if (ret != 0) {
+  if (ret != 0 && ret != HB_DNN_TASK_NUM_EXCEED_LIMIT) {
     RCLCPP_ERROR(this->get_logger(), "Run predict failed!");
     return ret;
   }
@@ -1011,7 +1011,8 @@ void DnnExampleNode::RosImgProcess(
   }
 
   // 4. 开始预测
-  if (Run(inputs, dnn_output, nullptr) != 0) {
+  int ret = Run(inputs, dnn_output, nullptr);
+  if (ret != 0 && ret != HB_DNN_TASK_NUM_EXCEED_LIMIT) {
     RCLCPP_INFO(this->get_logger(), "Run predict failed!");
     return;
   }
@@ -1150,7 +1151,8 @@ void DnnExampleNode::SharedMemImgProcess(
   dnn_output->preprocess_timespec_end = time_now;
 
   // 3. 开始预测
-  if (Run(inputs, dnn_output, nullptr) != 0) {
+  int ret = Run(inputs, dnn_output, nullptr);
+  if (ret != 0 && ret != HB_DNN_TASK_NUM_EXCEED_LIMIT) {
     RCLCPP_ERROR(this->get_logger(), "Run predict failed!");
     return;
   }

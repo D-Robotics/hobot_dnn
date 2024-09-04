@@ -675,7 +675,7 @@ int DnnNodeImpl::Run(
                   "for this model!",
                   thread_pool_->msg_handle_.GetTaskNum(),
                   thread_pool_->msg_limit_count_);
-      return 0;
+      return HB_DNN_TASK_NUM_EXCEED_LIMIT;
     }
 
     auto infer_task = [this,
