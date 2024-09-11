@@ -80,6 +80,7 @@ include_directories(include
 )
 include_directories(
   ${SYS_ROOT}/usr/include/
+  ${SYS_ROOT}/usr/hobot/include/
   ${SYS_ROOT}/usr/include/opencv/
 )
 
@@ -87,6 +88,7 @@ link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
   ${SYS_ROOT}/usr/lib/hbmedia/
   ${SYS_ROOT}/usr/lib/
+  ${SYS_ROOT}/usr/hobot/lib/
 )
 
 add_executable(${PROJECT_NAME}

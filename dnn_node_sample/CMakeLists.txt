@@ -73,6 +73,7 @@ message("HOBOTCV_LIB_INSTALL_PATH is " ${HOBOTCV_LIB_INSTALL_PATH})
 
 link_directories(
   ${SYS_ROOT}/usr/lib/
+  ${SYS_ROOT}/usr/hobot/lib/
   ${SYS_ROOT}/usr/lib/hbbpu/
   ${SYS_ROOT}/usr/lib/hbmedia/
   ${HOBOTCV_LIB_INSTALL_PATH}
@@ -82,6 +83,7 @@ include_directories(
   include
   ${PROJECT_SOURCE_DIR}
   ${SYS_ROOT}/usr/include
+  ${SYS_ROOT}/usr/hobot/include
 )
 
 add_executable(${PROJECT_NAME}
