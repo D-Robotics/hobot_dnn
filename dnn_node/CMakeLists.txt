@@ -76,13 +76,6 @@ endif()
 message("PREFIX_PATH is " ${PREFIX_PATH})
 message("SYS_ROOT is " ${SYS_ROOT})
 
-set(CMAKE_BUILD_TYPE Debug)
-
-list(APPEND CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
-list(APPEND CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-string(REGEX REPLACE ";" " " CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
-string(REGEX REPLACE ";" " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-
 include_directories(include include/util/)
 include_directories(include
   ${PROJECT_SOURCE_DIR}
