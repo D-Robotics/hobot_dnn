@@ -582,7 +582,10 @@ std::shared_ptr<DNNTensor> ImageProc::GetBGRTensorFromBGRImg(
                                                     int scaled_img_width,
                                                     hbDNNTensorProperties &tensor_properties,
                                                     float &ratio,
-                                                    ImageType image_type) {
+                                                    ImageType image_type,
+                                                    bool is_pad,
+                                                    bool is_center_crop,
+                                                    bool is_scale) {
   cv::Mat bgr_mat;
   bgr_mat_tmp.copyTo(bgr_mat);
   auto w_stride = ALIGN_16(scaled_img_width);
@@ -626,6 +629,9 @@ std::shared_ptr<DNNTensor> ImageProc::GetBGRTensorFromBGRImg(
     case HB_DNN_TENSOR_TYPE_F32: {
       src_elem_size = 4; 
       pad_frame.convertTo(mat_tmp, CV_32F); 
+      if (is_scale) {
+        mat_tmp /= 255.0;
+      }
     } break;
     default: RCLCPP_ERROR(rclcpp::get_logger("image_proc"), 
           "Tensor Type %d is not support", tensor_properties.tensorType); break;  
