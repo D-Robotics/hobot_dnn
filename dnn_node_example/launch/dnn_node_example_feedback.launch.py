@@ -33,15 +33,6 @@ def generate_launch_description():
         "dnn_example_image", default_value=TextSubstitution(text="config/test.jpg")
     )
 
-    # 拷贝config中文件
-    dnn_node_example_path = os.path.join(
-        get_package_prefix('dnn_node_example'),
-        "lib/dnn_node_example")
-    print("dnn_node_example_path is ", dnn_node_example_path)
-    cp_cmd = "cp -r " + dnn_node_example_path + "/config ."
-    print("cp_cmd is ", cp_cmd)
-    os.system(cp_cmd)
-
     return LaunchDescription([
         config_file_launch_arg,
         img_file_launch_arg,

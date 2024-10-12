@@ -95,13 +95,13 @@ struct DnnNodePara {
 struct DnnNodeRunTimeStat {
   // 推理统计，包括输入数据给模型、处理输入数据、模型推理、等待推理结束的过程
   int infer_time_ms = 0;
-  struct timespec infer_timespec_start;
-  struct timespec infer_timespec_end;
+  struct timespec infer_timespec_start = {0, 0};
+  struct timespec infer_timespec_end = {0, 0};
 
   // 解析模型输出统计
   int parse_time_ms = 0;
-  struct timespec parse_timespec_start;
-  struct timespec parse_timespec_end;
+  struct timespec parse_timespec_start = {0, 0};
+  struct timespec parse_timespec_end = {0, 0};
 
   // 推理输入帧率
   float input_fps;

@@ -76,10 +76,12 @@ struct DnnNodeRunTimeFpsStat {
       last_frame_tp = nullptr;
   int frame_count = 0;
   float frame_fps = -1;
+  int infer_time = -1;
   std::mutex frame_stat_mtx;
 
   bool Update();
   float Get();
+  int GetInferTime();
 };
 
 struct ThreadPool {

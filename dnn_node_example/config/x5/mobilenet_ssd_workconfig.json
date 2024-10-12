@@ -1,5 +1,6 @@
 {
 	"model_file": "/opt/hobot/model/x5/basic/ssd_mobilenetv1_300x300_nv12.bin",
+	"task_num": 4,
 	"dnn_Parser": "ssd",
 	"model_output_count": 12
 }

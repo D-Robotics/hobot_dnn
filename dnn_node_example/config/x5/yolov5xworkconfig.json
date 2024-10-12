@@ -1,6 +1,7 @@
 {
 	"model_file": "/opt/hobot/model/x5/basic/yolov5x_672x672_nv12.bin",
 	"model_name": "yolov5x_672x672_nv12",
+	"task_num": 2,
 	"dnn_Parser": "yolov5x",
 	"model_output_count": 3,
 	"class_num": 80,
