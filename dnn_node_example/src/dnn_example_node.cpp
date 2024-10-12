@@ -287,6 +287,9 @@ int DnnExampleNode::LoadConfig() {
   if (document.HasMember("model_name")) {
     model_name_ = document["model_name"].GetString();
   }
+  if (document.HasMember("task_num")) {
+    task_num_ = document["task_num"].GetInt();
+  }
 
   int ret = 0;
   // 更新parser，后处理中根据parser类型选择解析方法

@@ -186,7 +186,10 @@ class ImageProc {
         int scaled_img_width,
         hbDNNTensorProperties &tensor_properties,
         float &ratio,
-        ImageType image_type = ImageType::BGR);
+        ImageType image_type = ImageType::BGR,
+        bool is_pad = true,
+        bool is_center_crop = false,
+        bool is_scale = false);
 
   // 从图像文件中读取数据并生成 DNNTensor
   // 如果输入图片size小于scale size（模型输入size）：将输入图片padding到左上区域

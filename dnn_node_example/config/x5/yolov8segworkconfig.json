@@ -1,5 +1,6 @@
 {
 	"model_file": "/opt/hobot/model/x5/basic/yolov8_seg_640x640_nv12.bin",
+	"task_num": 4,
 	"dnn_Parser": "yolov8_seg",
 	"model_output_count": 10,
 	"reg_max": 16,

@@ -1,5 +1,6 @@
 {
 	"model_file": "/opt/hobot/model/x3/basic/yolov3_416x416_nv12.bin",
+	"task_num": 4,
 	"dnn_Parser": "yolov3",
 	"model_output_count": 3,
 	"class_num": 80,
