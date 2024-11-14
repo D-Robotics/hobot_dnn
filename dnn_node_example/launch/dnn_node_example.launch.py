@@ -87,7 +87,7 @@ def generate_launch_description():
                     'launch/hobot_image_publisher.launch.py')),
             launch_arguments={
                 'publish_image_source': LaunchConfiguration('publish_image_source'),
-                'publish_image_format': 'jpg',
+                'publish_image_format': LaunchConfiguration('publish_image_format'),
                 'publish_message_topic_name': '/hbmem_img',
                 'publish_fps': '5'
             }.items()

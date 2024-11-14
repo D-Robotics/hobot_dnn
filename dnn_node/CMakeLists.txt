@@ -80,7 +80,10 @@ include_directories(include include/util/)
 include_directories(include
   ${PROJECT_SOURCE_DIR}
 )
-include_directories(${SYS_ROOT}/usr/include)
+include_directories(
+        ${SYS_ROOT}/usr/include
+        ${SYS_ROOT}/usr/include/opencv/
+)
 
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
@@ -181,6 +184,7 @@ elseif(PLATFORM_X5)
     src/util/output_parser/classification/ptq_classification_output_parser.cpp
     src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
     src/util/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
+    src/util/output_parser/segmentation/ptq_stdc_output_parser.cpp
     src/easy_dnn/input_process.cpp
     src/easy_dnn/model.cpp
     src/easy_dnn/model_infer_task.cpp
