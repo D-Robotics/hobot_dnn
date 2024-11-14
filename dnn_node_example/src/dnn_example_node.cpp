@@ -40,6 +40,7 @@
 #include "dnn_node/util/output_parser/detection/ptq_yolo10_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_yolo8_seg_output_parser.h"
+#include "dnn_node/util/output_parser/segmentation/ptq_stdc_output_parser.h"
 
 #include "include/image_utils.h"
 #include "include/post_process/post_process_unet.h"
@@ -336,6 +337,9 @@ int DnnExampleNode::LoadConfig() {
     } else if ("yolov5x" == str_parser) {
       parser = DnnParserType::YOLOV5X_PARSER;
       ret = hobot::dnn_node::parser_yolov5x::LoadConfig(document);
+    } else if ("stdc" == str_parser) {
+      parser = DnnParserType::STDC_PARSER;
+      ret = hobot::dnn_node::parser_stdc::LoadConfig(document);
 #endif
     } else if ("classification" == str_parser) {
       parser = DnnParserType::CLASSIFICATION_PARSER;
@@ -504,6 +508,14 @@ int DnnExampleNode::PostProcess(
       parse_ret = hobot::dnn_node::parser_yolov8_seg::Parse(node_output, 
                                                             parser_output->resized_h, 
                                                             parser_output->resized_w, 
+                                                            parser_output->model_h,
+                                                            parser_output->model_w,
+                                                            det_result);
+      break;
+    case DnnParserType::STDC_PARSER:
+      parse_ret = hobot::dnn_node::parser_stdc::Parse(node_output,
+                                                            parser_output->resized_h,
+                                                            parser_output->resized_w,
                                                             parser_output->model_h,
                                                             parser_output->model_w,
                                                             det_result);

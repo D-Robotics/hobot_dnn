@@ -1,0 +1,5 @@
+{
+	"model_file": "/opt/hobot/model/x5/basic/stdc_512x1024.bin",
+	"dnn_Parser": "stdc",
+	"model_output_count": 1
+}
