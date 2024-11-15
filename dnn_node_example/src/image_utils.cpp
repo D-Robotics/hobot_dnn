@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "opencv2/imgproc/types_c.h"
 
 #include "dnn/hb_sys.h"
 

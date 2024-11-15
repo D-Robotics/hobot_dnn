@@ -36,6 +36,7 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(OpenCV 4 REQUIRED)
 
 # x3|rdkultra|x86
 set(PREFIX_PATH x3)
@@ -121,7 +122,6 @@ if(PLATFORM_X3)
   )
 
   target_link_libraries(${PROJECT_NAME}
-    opencv_world
     alog
     dnn
     cnn_intf
@@ -156,7 +156,6 @@ elseif(PLATFORM_Rdkultra)
     src/easy_dnn/task.cpp
   )
   target_link_libraries(${PROJECT_NAME}
-    opencv_world
     alog
     dnn
     cnn_intf
@@ -192,7 +191,6 @@ elseif(PLATFORM_X5)
     src/easy_dnn/task.cpp
   )
   target_link_libraries(${PROJECT_NAME}
-    opencv_world
     alog
     gflags
     dnn
@@ -228,7 +226,6 @@ elseif(PLATFORM_X86)
   )
 
   target_link_libraries(${PROJECT_NAME}
-    opencv_world
     dnn
     hbdk_sim_x86
   )
@@ -239,6 +236,7 @@ ament_target_dependencies(
   ${PROJECT_NAME}
   rclcpp
   std_msgs
+  OpenCV
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

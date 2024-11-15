@@ -36,21 +36,18 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 ### X3 依赖
 
 - dnn:1.18.4
-- opencv:3.4.5
 
 ### Rdkultra 依赖
 
 - dnn:1.17.3
-- opencv:3.4.5
 
 ### X5 依赖
+
 - dnn:1.23.5
-- opencv:3.4.5
 
 ### X86 依赖
 
 - dnn:1.12.3
-- opencv:3.4.5
 
 ## X3/Rdkultra/X5 Ubuntu系统上编译
 
