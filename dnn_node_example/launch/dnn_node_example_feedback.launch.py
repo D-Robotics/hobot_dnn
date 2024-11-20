@@ -25,6 +25,15 @@ from ament_index_python.packages import get_package_prefix
 
 
 def generate_launch_description():
+    # 拷贝config中文件
+    dnn_node_example_path = os.path.join(
+        get_package_prefix('dnn_node_example'),
+        "lib/dnn_node_example")
+    print("dnn_node_example_path is ", dnn_node_example_path)
+    cp_cmd = "cp -r " + dnn_node_example_path + "/config ."
+    print("cp_cmd is ", cp_cmd)
+    os.system(cp_cmd)
+
     config_file_launch_arg = DeclareLaunchArgument(
         "dnn_example_config_file", default_value=TextSubstitution(text="config/fcosworkconfig.json")
     )
