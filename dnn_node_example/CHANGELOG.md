@@ -1,6 +1,6 @@
 # Changelog for package dnn_node_example
 
-tros_2.4.1 (2024-11-18)
+tros_2.4.1 (2024-11-20)
 ------------------
 1. 新增在config配置任务数功能。
 2. 依赖的OpenCV版本从3.4.5升级到4.5。
