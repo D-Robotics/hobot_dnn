@@ -57,6 +57,10 @@ struct PTQYolo3DarknetConfig {
   int class_num;
   std::vector<std::string> class_names;
   std::vector<int> output_order;
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
   std::string Str() {
     std::stringstream ss;
     ss << "strides: ";
@@ -127,7 +131,10 @@ void PostProcessQuantiScaleNHWC(std::shared_ptr<DNNTensor> tensor,
 void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                  std::vector<int> order);
 
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 PTQYolo3DarknetConfig yolo3_config_ = default_ptq_yolo3_darknet_config;
 float score_threshold_ = 0.3;
 float nms_threshold_ = 0.45;
@@ -320,6 +327,8 @@ int32_t Parse(
   if (!result) {
     result = std::make_shared<DnnParserResult>();
   }
+
+  SortByOrder(node_output->output_tensors,yolo3_config_.output_order);
 
   int ret = PostProcess(node_output->output_tensors, result->perception);
   if (ret != 0) {

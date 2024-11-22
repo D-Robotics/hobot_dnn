@@ -69,6 +69,10 @@ struct PTQYolo8Config {
   std::vector<std::string> class_names;
   std::vector<std::vector<float>> dequantize_scale;
   std::vector<int> output_order;
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
   std::string Str() {
     std::stringstream ss;
     ss << "strides: ";
@@ -215,6 +219,10 @@ int InitOutputOrder(const std::vector<int> &output_order){
   }
   return 0;
 }
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 
 int LoadConfig(const rapidjson::Document &document) {
   int model_output_count = 0;
@@ -268,7 +276,10 @@ int LoadConfig(const rapidjson::Document &document) {
   if (document.HasMember("is_performance")) {
     is_performance_ = document["is_performance"].GetBool();
   }
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
   if (document.HasMember("output_order")) {
     for(size_t i = 0; i < document["output_order"].Size(); i++){
       yolo8_config_.output_order.push_back(document["output_order"][i].GetInt());
@@ -276,8 +287,12 @@ int LoadConfig(const rapidjson::Document &document) {
     if(InitOutputOrder(yolo8_config_.output_order) < 0){
       return -1;
     }
+<<<<<<< Updated upstream
   }  
 
+=======
+  }
+>>>>>>> Stashed changes
   return 0;
 }
 
@@ -288,8 +303,12 @@ float DequantiScale(int32_t data,
                     bool big_endian,
                     float &scale_value);
 
+<<<<<<< Updated upstream
 void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                  std::vector<int> order);
+=======
+void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,std::vector<int> order);
+>>>>>>> Stashed changes
 
 void ParseTensor(std::shared_ptr<DNNTensor> clses,
                  std::shared_ptr<DNNTensor> boxes,
@@ -377,6 +396,8 @@ int32_t Parse(
     result = std::make_shared<DnnParserResult>();
   }
 
+  SortByOrder(node_output->output_tensors,yolo8_config_.output_order);
+  
   int ret = PostProcess(node_output->output_tensors, 
                         result->perception);
 

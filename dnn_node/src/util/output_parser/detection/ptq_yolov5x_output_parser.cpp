@@ -291,7 +291,10 @@ int LoadConfig(const rapidjson::Document &document) {
       return -1;
     }
   }
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
   return 0;
 }
 
