@@ -167,6 +167,7 @@ int InitAnchorsTables(const std::vector<std::vector<double>> &anchors_tables){
   return 0;
 }
 
+
 int LoadConfig(const rapidjson::Document &document) {
   int model_output_count = 0;
   if (document.HasMember("model_output_count")) {
@@ -240,6 +241,7 @@ int32_t Parse(
                 "postprocess return error, code = %d",
                 ret);
   }
+
   std::stringstream ss;
   ss << "Yolo2_detection_parser parse finished, predict result: "
      << result->perception;
@@ -406,6 +408,7 @@ int PostProcessQuantiSCALE(std::vector<std::shared_ptr<DNNTensor>> &tensors,
   nms(dets, nms_threshold_, nms_top_k_, perception.det, false);
   return 0;
 }
+
 
 }  // namespace parser_yolov2
 }  // namespace dnn_node

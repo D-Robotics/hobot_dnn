@@ -21,7 +21,7 @@
 #include <future>
 #include <numeric>
 #include <algorithm>
-
+#include <map>
 #include "rapidjson/document.h"
 #include "rclcpp/rclcpp.hpp"
 
@@ -70,7 +70,7 @@ struct PTQYolo10Config {
   int reg_max;
   std::vector<std::string> class_names;
   std::vector<std::vector<float>> dequantize_scale;
-
+  std::vector<int> output_order;
   std::string Str() {
     std::stringstream ss;
     ss << "strides: ";
@@ -169,7 +169,6 @@ int InitRegMax(const int &reg_max) {
   return 0;
 }
 
-
 int InitStrides(const std::vector<int> &strides, const int &model_output_count){
   int size = strides.size();
   if(size * 2 != model_output_count){
@@ -185,6 +184,37 @@ int InitStrides(const std::vector<int> &strides, const int &model_output_count){
   return 0;
 }
 
+int InitOutputOrder(const std::vector<int> &output_order){
+  size_t size_o = output_order.size();
+  std::map<int, bool> order_map = {
+    {0, false},
+    {1, false},
+    {2, false},
+    {3, false},
+    {4, false},
+    {5, false}
+};
+  if(size_o!=6){
+      RCLCPP_ERROR(rclcpp::get_logger("yolo10_detection_parser"),
+              "output order list size %d is not equal to 6",
+              size_o);
+      return -1;
+  }
+  for(int i = 0;i < 6; i++){
+    if(order_map[output_order[i]]==true){
+      RCLCPP_ERROR(rclcpp::get_logger("yolo10_detection_parser"),
+              "duplicate numbers appear in output order list");
+      return -1;
+    }
+    if(output_order[i]<0||output_order[i]>5){
+      RCLCPP_ERROR(rclcpp::get_logger("yolo10_detection_parser"),
+              "invalid value appear in output order list");
+      return -1;
+    }
+    order_map[output_order[i]] = true;
+  }
+  return 0;
+}
 
 int LoadConfig(const rapidjson::Document &document) {
   int model_output_count = 0;
@@ -235,7 +265,14 @@ int LoadConfig(const rapidjson::Document &document) {
   if (document.HasMember("is_performance")) {
     is_performance_ = document["is_performance"].GetBool();
   }
-
+  if (document.HasMember("output_order")) {
+    for(size_t i = 0; i < document["output_order"].Size(); i++){
+      yolo10_config_.output_order.push_back(document["output_order"][i].GetInt());
+    }
+    if(InitOutputOrder(yolo10_config_.output_order) < 0){
+      return -1;
+    }
+  }
   return 0;
 }
 
@@ -246,7 +283,7 @@ float DequantiScale(int32_t data,
                     bool big_endian,
                     float &scale_value);
 
-
+void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,std::vector<int> order);
 
 void ParseTensor(std::shared_ptr<DNNTensor> clses,
                  std::shared_ptr<DNNTensor> boxes,
@@ -333,7 +370,7 @@ int32_t Parse(
   if (!result) {
     result = std::make_shared<DnnParserResult>();
   }
-
+  SortByOrder(node_output->output_tensors,yolo10_config_.output_order);
   int ret = PostProcess(node_output->output_tensors, 
                         result->perception);
   if (ret != 0) {
@@ -341,7 +378,6 @@ int32_t Parse(
                 "postprocess return error, code = %d",
                 ret);
   }
-
   std::stringstream ss;
   ss << "Yolo10_detection_parser parse finished, predict result: "
      << result->perception;
@@ -350,15 +386,15 @@ int32_t Parse(
   return ret;
 }
 
-
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
-                Perception &perception) {
+                Perception &perception) { 
   perception.type = Perception::DET;
   std::vector<Detection> dets;
 
   auto ts_start = std::chrono::steady_clock::now();
   std::vector<std::future<std::shared_ptr<std::vector<Detection>>>> futs;
   auto output_size = output_tensors.size() / 2;
+  
   for (size_t i = 0; i < output_size; i++) {
     auto fut = std::async(std::launch::async, [&output_tensors, i](){
       std::shared_ptr<std::vector<Detection>> sp_det = nullptr;
@@ -395,7 +431,8 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
       dets.insert(dets.end(), std::make_move_iterator(det->begin()),
                   std::make_move_iterator(det->end()));
     }
-  }
+  } 
+
   int parse_tensor_time_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::steady_clock::now() - ts_start)
@@ -427,11 +464,19 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
   return 0;
 }
 
-
 float DequantiScale(int32_t data,
                     bool big_endian,
                     float &scale_value) {
   return static_cast<float>(r_int32(data, big_endian)) * scale_value;
+}
+
+void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &outputs,std::vector<int> order){
+  std::vector<std::shared_ptr<DNNTensor>>  outputs_sorted(outputs.size());
+  for(int i = 0; i < outputs.size(); i++){
+    std::cout<<outputs[order[i]]<<std::endl;
+    outputs_sorted[i] = outputs[order[i]];
+  }
+  outputs = outputs_sorted;
 }
 
 }  // namespace parser_yolov10

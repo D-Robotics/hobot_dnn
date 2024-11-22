@@ -54,6 +54,7 @@ struct PTQYolo5Config {
   int class_num;
   std::vector<std::string> class_names;
   std::vector<std::vector<float>> dequantize_scale;
+  std::vector<int> output_order;
 
   std::string Str() {
     std::stringstream ss;
@@ -196,6 +197,35 @@ int InitAnchorsTables(const std::vector<std::vector<std::vector<double>>> &ancho
   return 0;
 }
 
+int InitOutputOrder(const std::vector<int> &output_order){
+  size_t size_o = output_order.size();
+  std::map<int, bool> order_map = {
+    {0, false},
+    {1, false},
+    {2, false}
+};
+  if(size_o!=3){
+      RCLCPP_ERROR(rclcpp::get_logger("yolo5_detection_parser"),
+              "output order list size %d is not equal to 3",
+              size_o);
+      return -1;
+  }
+  for(int i = 0;i < 3; i++){
+    if(order_map[output_order[i]]==true){
+      RCLCPP_ERROR(rclcpp::get_logger("yolo5_detection_parser"),
+              "duplicate numbers appear in output order list");
+      return -1;
+    }
+    if(output_order[i]<0||output_order[i] > 3){
+      RCLCPP_ERROR(rclcpp::get_logger("yolo5_detection_parser"),
+              "invalid value appear in output order list");
+      return -1;
+    }
+    order_map[output_order[i]] = true;
+  }
+  return 0;
+}
+
 int LoadConfig(const rapidjson::Document &document) {
   int model_output_count = 0;
   if (document.HasMember("model_output_count")) {
@@ -253,6 +283,14 @@ int LoadConfig(const rapidjson::Document &document) {
   if (document.HasMember("nms_top_k")) {
     nms_top_k_ = document["nms_top_k"].GetInt();
   }
+  if (document.HasMember("output_order")) {
+    for(size_t i = 0; i < document["output_order"].Size(); i++){
+      yolo5_config_.output_order.push_back(document["output_order"][i].GetInt());
+    }
+    if(InitOutputOrder(yolo5_config_.output_order) < 0){
+      return -1;
+    }
+  }
 
   return 0;
 }
@@ -261,6 +299,8 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                 Perception &perception);
 
 float DequantiScale(int32_t data, bool big_endian, float &scale_value);
+
+void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,std::vector<int> order);
 
 void ParseTensor(std::shared_ptr<DNNTensor> tensor,
                  int layer,
@@ -436,12 +476,14 @@ int32_t Parse(
     result = std::make_shared<DnnParserResult>();
   }
 
-  int ret = PostProcess(node_output->output_tensors, result->perception);
+  int ret = PostProcess(node_output->output_tensors, result->perception);  
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("Yolo5_detection_parser"),
                 "postprocess return error, code = %d",
                 ret);
   }
+
+  SortByOrder(node_output->output_tensors,yolo5_config_.output_order);
 
   std::stringstream ss;
   ss << "Yolo5_detection_parser parse finished, predict result: "
@@ -465,6 +507,15 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
 
 float DequantiScale(int32_t data, bool big_endian, float &scale_value) {
   return static_cast<float>(r_int32(data, big_endian)) * scale_value;
+}
+
+void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &outputs,std::vector<int> order){
+  std::vector<std::shared_ptr<DNNTensor>>  outputs_sorted(outputs.size());
+  for(int i = 0; i < outputs.size(); i++){
+    std::cout<<outputs[order[i]]<<std::endl;
+    outputs_sorted[i] = outputs[order[i]];
+  }
+  outputs = outputs_sorted;
 }
 
 }  // namespace parser_yolov5
