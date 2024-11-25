@@ -9,9 +9,5 @@
 	"score_threshold":  0.3,
 	"nms_threshold": 0.45,
 	"nms_top_k": 500,
-<<<<<<< Updated upstream
 	"output_order": [0,1,2]
-=======
-	"output_order":[0,1,2]
->>>>>>> Stashed changes
 }
