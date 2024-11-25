@@ -54,7 +54,7 @@ struct PTQYolo5Config {
   int class_num;
   std::vector<std::string> class_names;
   std::vector<std::vector<float>> dequantize_scale;
-
+  std::vector<int> output_order;
   std::string Str() {
     std::stringstream ss;
     ss << "strides: ";

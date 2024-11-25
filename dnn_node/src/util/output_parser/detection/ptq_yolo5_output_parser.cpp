@@ -401,9 +401,6 @@ int32_t Parse(
                 "postprocess return error, code = %d",
                 ret);
   }
-
-  SortByOrder(node_output->output_tensors,yolo5_config_.output_order);
-
   std::stringstream ss;
   ss << "Yolo5_detection_parser parse finished, predict result: "
      << result->perception;

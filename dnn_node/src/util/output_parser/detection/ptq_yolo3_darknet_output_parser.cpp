@@ -329,8 +329,6 @@ int32_t Parse(
                 ret);
   }
 
-  SortByOrder(node_output->output_tensors,yolo3_config_.output_order);
-
   std::stringstream ss;
   ss << "PTQYolo3DarknetOutputParser parse finished, predict result: "
      << result->perception;

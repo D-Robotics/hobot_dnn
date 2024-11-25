@@ -381,8 +381,6 @@ int32_t Parse(
   int ret = PostProcess(node_output->output_tensors, 
                         result->perception);
 
-  SortByOrder(node_output->output_tensors,yolo8_config_.output_order);
-
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("Yolo8_detection_parser"),
                 "postprocess return error, code = %d",
