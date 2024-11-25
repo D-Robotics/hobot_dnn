@@ -265,10 +265,6 @@ int LoadConfig(const rapidjson::Document &document) {
   if (document.HasMember("is_performance")) {
     is_performance_ = document["is_performance"].GetBool();
   }
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
   if (document.HasMember("output_order")) {
     for(size_t i = 0; i < document["output_order"].Size(); i++){
       yolo10_config_.output_order.push_back(document["output_order"][i].GetInt());
@@ -277,10 +273,6 @@ int LoadConfig(const rapidjson::Document &document) {
       return -1;
     }
   }
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
   return 0;
 }
 
@@ -378,13 +370,7 @@ int32_t Parse(
   if (!result) {
     result = std::make_shared<DnnParserResult>();
   }
-<<<<<<< Updated upstream
   SortByOrder(node_output->output_tensors,yolo10_config_.output_order);
-=======
-
-  SortByOrder(node_output->output_tensors,yolo10_config_.output_order);
-
->>>>>>> Stashed changes
   int ret = PostProcess(node_output->output_tensors, 
                         result->perception);
   if (ret != 0) {

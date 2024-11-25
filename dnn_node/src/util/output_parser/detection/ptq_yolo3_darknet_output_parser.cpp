@@ -131,10 +131,6 @@ void PostProcessQuantiScaleNHWC(std::shared_ptr<DNNTensor> tensor,
 void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                  std::vector<int> order);
 
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
 PTQYolo3DarknetConfig yolo3_config_ = default_ptq_yolo3_darknet_config;
 float score_threshold_ = 0.3;
 float nms_threshold_ = 0.45;

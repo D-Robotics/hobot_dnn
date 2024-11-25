@@ -283,10 +283,6 @@ int LoadConfig(const rapidjson::Document &document) {
   if (document.HasMember("nms_top_k")) {
     nms_top_k_ = document["nms_top_k"].GetInt();
   }
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
   if (document.HasMember("output_order")) {
     for(size_t i = 0; i < document["output_order"].Size(); i++){
       yolo5_config_.output_order.push_back(document["output_order"][i].GetInt());
@@ -294,11 +290,7 @@ int LoadConfig(const rapidjson::Document &document) {
     if(InitOutputOrder(yolo5_config_.output_order) < 0){
       return -1;
     }
-<<<<<<< Updated upstream
   } 
-=======
-  }
->>>>>>> Stashed changes
   return 0;
 }
 
