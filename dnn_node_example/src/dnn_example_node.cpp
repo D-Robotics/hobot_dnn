@@ -307,6 +307,9 @@ int DnnExampleNode::LoadConfig() {
     } else if ("yolov10" == str_parser) {
       parser = DnnParserType::YOLOV10_PARSER;
       ret = hobot::dnn_node::parser_yolov10::LoadConfig(document);
+    } else if ("yolov11" == str_parser){
+      parser = DnnParserType::YOLOV8_PARSER;
+      ret = hobot::dnn_node::parser_yolov8::LoadConfig(document);
 #ifdef PLATFORM_X3
     } else if ("yolov5" == str_parser) {
       parser = DnnParserType::YOLOV5_PARSER;
