@@ -57,10 +57,6 @@ struct PTQYolo3DarknetConfig {
   int class_num;
   std::vector<std::string> class_names;
   std::vector<int> output_order;
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
   std::string Str() {
     std::stringstream ss;
     ss << "strides: ";
