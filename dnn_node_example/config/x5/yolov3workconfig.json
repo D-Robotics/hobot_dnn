@@ -9,5 +9,5 @@
 	"score_threshold":  0.3,
 	"nms_threshold": 0.45,
 	"nms_top_k": 500,
-	"output_order": [2,1,0]
+	"output_order": [0,1,2]
 }
