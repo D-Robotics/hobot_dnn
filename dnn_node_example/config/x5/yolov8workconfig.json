@@ -9,5 +9,6 @@
 	"strides": [8, 16, 32],
 	"score_threshold": 0.25,
 	"nms_threshold": 0.7,
-	"nms_top_k": 300
+	"nms_top_k": 300,
+	"output_order": [0,1,2,3,4,5]
 }
