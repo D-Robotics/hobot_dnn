@@ -89,11 +89,6 @@ def generate_launch_description():
             default_value='./config/target.jpg',
             description='feedback picture')
 
-        publish_image_fps = DeclareLaunchArgument(
-            'publish_image_fps',
-            default_value='5',
-            description='publish_image_fps picture')
-
         fb_node = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(
@@ -101,9 +96,9 @@ def generate_launch_description():
                     'launch/hobot_image_publisher.launch.py')),
             launch_arguments={
                 'publish_image_source': LaunchConfiguration('publish_image_source'),
-                'publish_image_format': LaunchConfiguration('publish_image_format'),
                 'publish_message_topic_name': '/hbmem_img',
-                'publish_fps': LaunchConfiguration('publish_image_fps')
+                'publish_image_format': 'jpg',
+                'publish_fps': '5'
             }.items()
         )
 

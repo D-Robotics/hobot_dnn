@@ -1,5 +1,10 @@
 # Changelog for package dnn_node_example
 
+tros_2.4.1rc2 (2024-11-20)
+------------------
+1. 新增对yolo系列模型进行config配置。
+2. 修复launch文件运行image publish节点失败的问题。
+
 tros_2.4.1 (2024-11-20)
 ------------------
 1. 新增在config配置任务数功能。
