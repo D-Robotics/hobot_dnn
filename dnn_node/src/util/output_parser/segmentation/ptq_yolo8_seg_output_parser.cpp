@@ -503,13 +503,13 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
   float proto_w_ratio = static_cast<float>(proto_w) / static_cast<float>(model_w);
 
   int valid_h = static_cast<int>(valid_h_ratio * proto_h);
-  int valid_w = static_cast<int>(valid_w_ratio * proto_h);
+  int valid_w = static_cast<int>(valid_w_ratio * proto_w);
 
   perception.seg.valid_h = valid_h;
   perception.seg.valid_w = valid_w;
   perception.seg.height = static_cast<int>(model_h * valid_h_ratio);
   perception.seg.width = static_cast<int>(model_w * valid_w_ratio);
-  
+
   auto *proto_data = reinterpret_cast<int16_t *>(proto->sysMem[0].virAddr);
   float proto_scale_data = proto->properties.scale.scaleData[0];
   int num_mask = yolo8_seg_config_.num_mask;
@@ -530,6 +530,39 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
     int y1_crop = static_cast<int>(box.ymin * proto_h_ratio + 1.0);
     int x2_crop = static_cast<int>(box.xmax * proto_w_ratio);
     int y2_crop = static_cast<int>(box.ymax * proto_h_ratio);
+    if (x1_crop < 0) {
+      x1_crop = 0;
+    }
+    if (y1_crop < 0) {
+      y1_crop = 0;
+    }
+    if (x2_crop < 0) {
+      x2_crop = 0;
+    }
+    if (y2_crop < 0) {
+      y2_crop = 0;
+    }
+    if (x2_crop >= perception.seg.valid_w) {
+      x2_crop = perception.seg.valid_w - 1;
+    }
+    if (y2_crop >= perception.seg.valid_h) {
+      y2_crop = perception.seg.valid_h - 1;
+    }
+    if (x1_crop >= 0 && x1_crop < perception.seg.valid_w &&
+      x2_crop >= x1_crop && x2_crop < perception.seg.valid_w &&
+      y1_crop >= 0 && y1_crop < perception.seg.valid_h &&
+      y2_crop >= y1_crop && y2_crop < perception.seg.valid_h) {
+      // check success
+    } else {
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo8_seg_parser"),
+        "invalid box: [%d, %d, %d, %d], valid w: %d, h: %d",
+        x1_crop, y1_crop, x2_crop, y2_crop, perception.seg.valid_w, perception.seg.valid_h);
+      assert(x1_crop >= 0 && x1_crop < perception.seg.valid_w);
+      assert(x2_crop >= x1_crop && x2_crop < perception.seg.valid_w);
+      assert(y1_crop >= 0 && y1_crop < perception.seg.valid_h);
+      assert(y2_crop >= y1_crop && y2_crop < perception.seg.valid_h);
+    }
+    
     float sum;
     for (int h = y1_crop; h < y2_crop && h < valid_h; ++h) {
       int16_t *cur_proto_data = proto_data + (h * proto_w + x1_crop) * num_mask;
