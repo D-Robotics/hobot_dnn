@@ -22,8 +22,6 @@
 #include <vector>
 #include "opencv2/imgproc/types_c.h"
 
-#include "dnn/hb_sys.h"
-
 int ImageUtils::Render(
     const std::shared_ptr<hobot::dnn_node::NV12PyramidInput> &pyramid,
     const ai_msgs::msg::PerceptionTargets::UniquePtr &ai_msg,

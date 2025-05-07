@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>dnn_node_example</name>
-  <version>2.4.1</version>
+  <version>2.5.0</version>
   <description>TogetheROS dnn node example</description>
   <maintainer email="kao.zhu@d-robotics.cc">zhukao</maintainer>
   <license>Apache License 2.0</license>
@@ -21,11 +21,11 @@
   <depend>hobot_cv</depend>
   <depend>rclcpp_components</depend>
 
-  <exec_depend>mipi_cam</exec_depend>
+  <!-- <exec_depend>mipi_cam</exec_depend>
   <exec_depend>hobot_usb_cam</exec_depend>
   <exec_depend>hobot_image_publisher</exec_depend>
   <exec_depend>hobot_codec</exec_depend>
-  <exec_depend>websocket</exec_depend>
+  <exec_depend>websocket</exec_depend> -->
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

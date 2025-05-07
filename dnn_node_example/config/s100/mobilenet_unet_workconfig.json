@@ -1,0 +1,5 @@
+{
+	"model_file": "/opt/hobot/model/s100/basic/deeplabv3plus_dilation1248_1024x2048_nv12.hbm",
+	"dnn_Parser": "unet",
+	"model_output_count": 1
+}

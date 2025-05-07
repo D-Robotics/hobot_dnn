@@ -38,38 +38,47 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(OpenCV 4 REQUIRED)
 
-# x3|rdkultra|x86
-set(PREFIX_PATH x3)
+# libdnn|ucp
+set(PREFIX_PATH libdnn)
 set(SYS_ROOT ${CMAKE_SYSROOT})
 
 if(PLATFORM_X3)
   message("build platform X3")
   add_definitions(-DPLATFORM_X3)
-  set(PREFIX_PATH x3)
+  add_definitions(-DBPU_LIBDNN)
+  set(PREFIX_PATH libdnn)
 elseif(PLATFORM_Rdkultra)
   message("build platform Rdkultra")
   add_definitions(-DPLATFORM_Rdkultra)
-  set(PREFIX_PATH rdkultra)
+  add_definitions(-DBPU_LIBDNN)
+  set(PREFIX_PATH libdnn)
 elseif(PLATFORM_X5)
   message("build platform X5")
   add_definitions(-DPLATFORM_X5)
-  set(PREFIX_PATH x5)
+  add_definitions(-DBPU_LIBDNN)
+  set(PREFIX_PATH libdnn)
+elseif(PLATFORM_S100)
+  message("build platform S100")
+  add_definitions(-DPLATFORM_S100)
+  add_definitions(-DBPU_UCP)
+  set(PREFIX_PATH ucp)
 elseif(PLATFORM_X86)
   message("build platform x86")
   add_definitions(-DPLATFORM_X86)
-  set(PREFIX_PATH x86)
   set(SYS_ROOT ${THIRD_PARTY})
+  add_definitions(-DBPU_LIBDNN)
+  set(PREFIX_PATH libdnn)
 else()
   if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
     message("invalid platform, build platform X3 default")
     add_definitions(-DPLATFORM_X3)
     set(PLATFORM_X3 ON)
-    set(PREFIX_PATH x3)
+    add_definitions(-DBPU_LIBDNN)
+    set(PREFIX_PATH libdnn)
   elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
     message("build platform X86")
     add_definitions(-DPLATFORM_X86)
     set(PLATFORM_X86 ON)
-    set(PREFIX_PATH x86)
     set(SYS_ROOT ${THIRD_PARTY})
   endif()
 endif()
@@ -77,12 +86,15 @@ endif()
 message("PREFIX_PATH is " ${PREFIX_PATH})
 message("SYS_ROOT is " ${SYS_ROOT})
 
-include_directories(include include/util/)
-include_directories(include
+include_directories(
+  include/${PREFIX_PATH}/
+  include/util/
   ${PROJECT_SOURCE_DIR}
 )
 include_directories(
         ${SYS_ROOT}/usr/include
+        ${SYS_ROOT}/usr/include/hobot/
+	      ${SYS_ROOT}/usr/hobot/include/
         ${SYS_ROOT}/usr/include/opencv/
 )
 
@@ -96,29 +108,29 @@ if(PLATFORM_X3)
     # Build dnn_node library
   add_library(${PROJECT_NAME} SHARED
     src/dnn_node.cpp
-    src/dnn_node_impl.cpp
-    src/util/image_proc.cpp
-    src/util/output_parser/detection/nms.cpp
-    src/util/output_parser/utils.cpp
-    src/util/threads/threadpool.cpp
-    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo8_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo10_output_parser.cpp
-    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
-    src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
-    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
-    src/util/output_parser/detection/fcos_output_parser.cpp
-    src/util/output_parser/classification/ptq_classification_output_parser.cpp
-    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
-    src/util/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
-    src/easy_dnn/input_process.cpp
-    src/easy_dnn/model.cpp
-    src/easy_dnn/model_infer_task.cpp
-    src/easy_dnn/model_roi_infer_task.cpp
-    src/easy_dnn/task.cpp
+    src/${PREFIX_PATH}/dnn_node_impl.cpp
+    src/${PREFIX_PATH}/image_proc.cpp
+    src/${PREFIX_PATH}/utils.cpp
+    src/${PREFIX_PATH}/easy_dnn/input_process.cpp
+    src/${PREFIX_PATH}/easy_dnn/model.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_roi_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/task.cpp
+    src/threads/threadpool.cpp
+    src/output_parser/detection/nms.cpp
+    src/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/output_parser/detection/ptq_yolov5x_output_parser.cpp
+    src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ptq_yolo10_output_parser.cpp
+    src/output_parser/detection/fasterrcnn_output_parser.cpp
+    src/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    src/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/output_parser/detection/fcos_output_parser.cpp
+    src/output_parser/classification/ptq_classification_output_parser.cpp
+    src/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
+    src/output_parser/segmentation/ptq_stdc_output_parser.cpp
   )
 
   target_link_libraries(${PROJECT_NAME}
@@ -131,29 +143,29 @@ if(PLATFORM_X3)
 elseif(PLATFORM_Rdkultra)
   add_library(${PROJECT_NAME} SHARED
     src/dnn_node.cpp
-    src/dnn_node_impl.cpp
-    src/util/image_proc.cpp
-    src/util/output_parser/detection/nms.cpp
-    src/util/output_parser/utils.cpp
-    src/util/threads/threadpool.cpp
-    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo8_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo10_output_parser.cpp
-    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
-    src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
-    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
-    src/util/output_parser/detection/fcos_output_parser.cpp
-    src/util/output_parser/classification/ptq_classification_output_parser.cpp
-    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
-    src/util/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
-    src/easy_dnn/input_process.cpp
-    src/easy_dnn/model.cpp
-    src/easy_dnn/model_infer_task.cpp
-    src/easy_dnn/model_roi_infer_task.cpp
-    src/easy_dnn/task.cpp
+    src/${PREFIX_PATH}/dnn_node_impl.cpp
+    src/${PREFIX_PATH}/image_proc.cpp
+    src/${PREFIX_PATH}/utils.cpp
+    src/${PREFIX_PATH}/easy_dnn/input_process.cpp
+    src/${PREFIX_PATH}/easy_dnn/model.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_roi_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/task.cpp
+    src/threads/threadpool.cpp
+    src/output_parser/detection/nms.cpp
+    src/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/output_parser/detection/ptq_yolov5x_output_parser.cpp
+    src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ptq_yolo10_output_parser.cpp
+    src/output_parser/detection/fasterrcnn_output_parser.cpp
+    src/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    src/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/output_parser/detection/fcos_output_parser.cpp
+    src/output_parser/classification/ptq_classification_output_parser.cpp
+    src/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
+    src/output_parser/segmentation/ptq_stdc_output_parser.cpp
   )
   target_link_libraries(${PROJECT_NAME}
     alog
@@ -165,30 +177,29 @@ elseif(PLATFORM_Rdkultra)
 elseif(PLATFORM_X5)
   add_library(${PROJECT_NAME} SHARED
     src/dnn_node.cpp
-    src/dnn_node_impl.cpp
-    src/util/image_proc.cpp
-    src/util/output_parser/detection/nms.cpp
-    src/util/output_parser/utils.cpp
-    src/util/threads/threadpool.cpp
-    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo8_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo10_output_parser.cpp
-    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
-    src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
-    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
-    src/util/output_parser/detection/fcos_output_parser.cpp
-    src/util/output_parser/classification/ptq_classification_output_parser.cpp
-    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
-    src/util/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
-    src/util/output_parser/segmentation/ptq_stdc_output_parser.cpp
-    src/easy_dnn/input_process.cpp
-    src/easy_dnn/model.cpp
-    src/easy_dnn/model_infer_task.cpp
-    src/easy_dnn/model_roi_infer_task.cpp
-    src/easy_dnn/task.cpp
+    src/${PREFIX_PATH}/dnn_node_impl.cpp
+    src/${PREFIX_PATH}/image_proc.cpp
+    src/${PREFIX_PATH}/utils.cpp
+    src/${PREFIX_PATH}/easy_dnn/input_process.cpp
+    src/${PREFIX_PATH}/easy_dnn/model.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_roi_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/task.cpp
+    src/threads/threadpool.cpp
+    src/output_parser/detection/nms.cpp
+    src/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/output_parser/detection/ptq_yolov5x_output_parser.cpp
+    src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ptq_yolo10_output_parser.cpp
+    src/output_parser/detection/fasterrcnn_output_parser.cpp
+    # src/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    src/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/output_parser/detection/fcos_output_parser.cpp
+    src/output_parser/classification/ptq_classification_output_parser.cpp
+    src/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
+    src/output_parser/segmentation/ptq_stdc_output_parser.cpp
   )
   target_link_libraries(${PROJECT_NAME}
     alog
@@ -197,32 +208,63 @@ elseif(PLATFORM_X5)
     cnn_intf
     hbrt_bayes_aarch64
   )
+elseif(PLATFORM_S100)
+  add_library(${PROJECT_NAME} SHARED
+    src/dnn_node.cpp
+    src/${PREFIX_PATH}/dnn_node_impl.cpp
+    src/${PREFIX_PATH}/image_proc.cpp
+    src/${PREFIX_PATH}/utils.cpp
+    src/${PREFIX_PATH}/easy_dnn/input_process.cpp
+    src/${PREFIX_PATH}/easy_dnn/model.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_infer_task.cpp
+    # src/${PREFIX_PATH}/easy_dnn/model_roi_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/task.cpp
+    src/output_parser/detection/nms.cpp
+    src/threads/threadpool.cpp
+    src/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/output_parser/detection/ptq_yolov5x_output_parser.cpp
+    src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ptq_yolo10_output_parser.cpp
+    # src/output_parser/detection/fasterrcnn_output_parser.cpp
+    # src/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    # src/output_parser/detection/ptq_ssd_output_parser.cpp
+    # src/output_parser/detection/fcos_output_parser.cpp
+    src/output_parser/classification/ptq_classification_output_parser.cpp
+    src/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
+    # src/output_parser/segmentation/ptq_stdc_output_parser.cpp
+  )
+  target_link_libraries(${PROJECT_NAME}
+    dnn
+    hbucp
+    pthread
+    rt
+    dl
+  )
 elseif(PLATFORM_X86)
   add_library(${PROJECT_NAME} SHARED
     src/dnn_node.cpp
-    src/dnn_node_impl.cpp
-    src/util/image_proc.cpp
-    src/util/output_parser/detection/nms.cpp
-    src/util/output_parser/utils.cpp
-    src/util/threads/threadpool.cpp
-    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
-    # src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
-    # src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo8_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo10_output_parser.cpp
-    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
-    # src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
-    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
-    src/util/output_parser/detection/fcos_output_parser.cpp
-    src/util/output_parser/classification/ptq_classification_output_parser.cpp
-    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolo8_seg_output_parser.cpp
-    src/easy_dnn/input_process.cpp
-    src/easy_dnn/model.cpp
-    src/easy_dnn/model_infer_task.cpp
-    src/easy_dnn/model_roi_infer_task.cpp
-    src/easy_dnn/task.cpp
+    src/${PREFIX_PATH}/dnn_node_impl.cpp
+    src/${PREFIX_PATH}/image_proc.cpp
+    src/${PREFIX_PATH}/utils.cpp
+    src/${PREFIX_PATH}/easy_dnn/input_process.cpp
+    src/${PREFIX_PATH}/easy_dnn/model.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_roi_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/task.cpp
+    src/output_parser/detection/nms.cpp
+    src/threads/threadpool.cpp
+    src/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ptq_yolo10_output_parser.cpp
+    src/output_parser/detection/fasterrcnn_output_parser.cpp
+    src/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/output_parser/detection/fcos_output_parser.cpp
+    src/output_parser/classification/ptq_classification_output_parser.cpp
+    src/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
   )
 
   target_link_libraries(${PROJECT_NAME}
@@ -249,7 +291,7 @@ install(TARGETS dnn_node
 
 # Install include files
 install(
-  FILES include/dnn_node/dnn_node.h include/dnn_node/dnn_node_data.h
+  FILES include/dnn_node.h include/${PREFIX_PATH}/dnn_node/dnn_node_data.h
   DESTINATION include/dnn_node/
 )
 
@@ -264,7 +306,7 @@ install(
 )
 
 install(
-  DIRECTORY include/easy_dnn/
+  DIRECTORY include/${PREFIX_PATH}/easy_dnn/
   DESTINATION include/easy_dnn/
 )
 

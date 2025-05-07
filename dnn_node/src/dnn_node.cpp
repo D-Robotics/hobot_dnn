@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "dnn_node/dnn_node.h"
+#include "dnn_node.h"
 
 #include <memory>
 #include <queue>
@@ -71,6 +71,7 @@ int DnnNode::Init() {
       return -1;
     }
     for (const auto &bpu_core_id : dnn_node_para_ptr_->bpu_core_ids) {
+    #ifdef BPU_LIBDNN
       if (bpu_core_id < HB_BPU_CORE_ANY ||
           bpu_core_id > HB_BPU_CORE_1) {
         RCLCPP_ERROR(rclcpp::get_logger("dnn"),
@@ -80,6 +81,21 @@ int DnnNode::Init() {
                      static_cast<int>(HB_BPU_CORE_1));
         return -1;
       }
+    #endif
+    #ifdef BPU_UCP
+      if (bpu_core_id < HB_UCP_BPU_CORE_ANY ||
+          bpu_core_id > HB_UCP_BPU_CORE_1) {
+        RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+                     "Invalid bpu_core_id %d",
+                     static_cast<int>(bpu_core_id));
+        RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+              "Invalid bpu_core_id %d, which should be [%d, %d]",
+              static_cast<int>(bpu_core_id),
+              static_cast<int>(HB_UCP_CORE_ANY),
+              static_cast<int>(HB_UCP_BPU_CORE_1));
+        return -1;
+      }
+    #endif
     }
   }
 

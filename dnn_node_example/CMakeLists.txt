@@ -68,6 +68,10 @@ elseif(PLATFORM_X5)
   message("build platform X5")
   add_definitions(-DPLATFORM_X5)
   set(PREFIX_PATH x5)
+elseif(PLATFORM_S100)
+  message("build platform S100")
+  add_definitions(-DPLATFORM_S100)
+  set(PREFIX_PATH s100)
 elseif(PLATFORM_X86)
   message("build platform x86")
   add_definitions(-DPLATFORM_X86)
@@ -95,6 +99,8 @@ include_directories(include
 include_directories(
   ${SYS_ROOT}/usr/include/opencv/
   ${SYS_ROOT}/usr/include/
+  ${SYS_ROOT}/usr/hobot/include/
+  ${SYS_ROOT}/usr/include/hobot/
 )
 
 link_directories(

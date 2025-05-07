@@ -22,7 +22,7 @@
 
 #include "rapidjson/document.h"
 
-#include "dnn/hb_dnn_ext.h"
+
 #include "dnn_node/dnn_node_data.h"
 #include "dnn_node/util/output_parser/perception_common.h"
 

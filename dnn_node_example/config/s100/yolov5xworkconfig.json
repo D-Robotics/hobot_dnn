@@ -1,0 +1,15 @@
+{
+	"model_file": "/opt/hobot/model/s100/basic/yolov5x_672x672_nv12.hbm",
+	"model_name": "yolov5x_672x672_nv12",
+	"task_num": 2,
+	"dnn_Parser": "yolov5x",
+	"model_output_count": 3,
+	"class_num": 80,
+	"cls_names_list": "config/coco.list",
+	"strides": [8, 16, 32],
+	"anchors_table": [[[10, 13], [16, 30], [33, 23]], [[30, 61], [62, 45], [59, 119]], [[116, 90], [156, 198], [373, 326]]],
+	"score_threshold": 0.4,
+	"nms_threshold": 0.5,
+	"nms_top_k": 5000,
+	"output_order": [0,1,2]
+}

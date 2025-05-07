@@ -33,7 +33,7 @@ def generate_launch_description():
     print("dnn_node_example_path is ", dnn_node_example_path)
     cp_cmd = "cp -r " + dnn_node_example_path + "/config ."
     print("cp_cmd is ", cp_cmd)
-    os.system(cp_cmd)
+    # os.system(cp_cmd)
 
     # args that can be set from the command line or a default will be used
     config_file_launch_arg = DeclareLaunchArgument(
@@ -173,6 +173,7 @@ def generate_launch_description():
         launch_arguments={
             'websocket_image_topic': '/image',
             'websocket_image_type': 'mjpeg',
+            'websocket_only_show_image': 'True',
             'websocket_smart_topic': LaunchConfiguration("dnn_example_msg_pub_topic_name")
         }.items()
     )
@@ -191,7 +192,7 @@ def generate_launch_description():
             {"msg_pub_topic_name": LaunchConfiguration(
                 "dnn_example_msg_pub_topic_name")}
         ],
-        arguments=['--ros-args', '--log-level', 'warn']
+        arguments=['--ros-args', '--log-level', 'error']
     )
 
     shared_mem_node = IncludeLaunchDescription(
