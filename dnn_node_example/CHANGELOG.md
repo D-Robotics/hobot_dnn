@@ -1,5 +1,9 @@
 # Changelog for package dnn_node_example
 
+tros_2.5.0 (2025-05-08)
+------------------
+1. 新增对S100算法适配。
+
 tros_2.4.1rc2 (2024-11-20)
 ------------------
 1. 新增对yolo系列模型进行config配置。

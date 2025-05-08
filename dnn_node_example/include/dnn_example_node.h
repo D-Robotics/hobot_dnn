@@ -103,7 +103,7 @@ class DnnExampleNode : public DnnNode {
   // 用于解析的配置文件，以及解析后的数据
   std::string config_file = "config/fcosworkconfig.json";
   DnnParserType parser = DnnParserType::INVALID_PARSER;
-  std::string model_file_name_ = "/opt/hobot/model/x3/basic/fcos_512x512_nv12.bin";
+  std::string model_file_name_ = "";
   std::string model_name_ = "";
 
   // 加载模型后，查询出模型输入分辨率
