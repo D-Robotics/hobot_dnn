@@ -33,7 +33,7 @@ def generate_launch_description():
     print("dnn_node_example_path is ", dnn_node_example_path)
     cp_cmd = "cp -r " + dnn_node_example_path + "/config ."
     print("cp_cmd is ", cp_cmd)
-    # os.system(cp_cmd)
+    os.system(cp_cmd)
 
     # args that can be set from the command line or a default will be used
     config_file_launch_arg = DeclareLaunchArgument(
