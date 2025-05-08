@@ -173,7 +173,6 @@ def generate_launch_description():
         launch_arguments={
             'websocket_image_topic': '/image',
             'websocket_image_type': 'mjpeg',
-            'websocket_only_show_image': 'True',
             'websocket_smart_topic': LaunchConfiguration("dnn_example_msg_pub_topic_name")
         }.items()
     )

@@ -1,6 +1,6 @@
 # Changelog for package dnn_node_example
 
-tros_2.5.0 (2025-05-07)
+tros_2.5.0 (2025-05-08)
 ------------------
 1. 新增对S100算法适配。
 
