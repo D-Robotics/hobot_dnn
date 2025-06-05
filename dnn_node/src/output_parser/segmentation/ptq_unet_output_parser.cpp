@@ -82,10 +82,6 @@ int32_t Parse(
                 "postprocess return error, code = %d",
                 ret);
   }
-  std::stringstream ss;
-  ss << "UnetOutputParser parse finished, predict result: "
-     << result->perception;
-  RCLCPP_DEBUG(rclcpp::get_logger("UnetOutputParser"), "%s", ss.str().c_str());
   return ret;
 }
 
