@@ -17,6 +17,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <string>
 
+#include "rapidjson/document.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/matx.hpp"
@@ -34,6 +35,8 @@
 namespace hobot {
 namespace dnn_node {
 namespace parser_unet {
+
+int LoadConfig(const rapidjson::Document &document);
 
 ai_msgs::msg::PerceptionTargets::UniquePtr PostProcess(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& outputs,

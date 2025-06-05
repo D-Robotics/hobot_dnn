@@ -360,6 +360,7 @@ int DnnExampleNode::LoadConfig() {
       ret = hobot::dnn_node::parser_fcos::LoadConfig(document);
     } else if ("unet" == str_parser) {
       parser = DnnParserType::UNET_PARSER;
+      ret = hobot::dnn_node::parser_unet::LoadConfig(document);
     } else if ("yolov8_seg" == str_parser) {
       parser = DnnParserType::YOLOV8_SEG_PARSER;
       ret = hobot::dnn_node::parser_yolov8_seg::LoadConfig(document);
