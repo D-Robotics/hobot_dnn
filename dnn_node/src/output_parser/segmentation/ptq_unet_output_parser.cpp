@@ -16,6 +16,7 @@
 
 #include <queue>
 
+#include "rapidjson/document.h"
 #include "rclcpp/rclcpp.hpp"
 
 #include "dnn_node/util/output_parser/utils.h"
@@ -24,7 +25,35 @@ namespace hobot {
 namespace dnn_node {
 namespace parser_unet {
 
-int num_classes_ = 19;
+struct UNetConfig {
+  int class_num;
+};
+
+UNetConfig default_unet_config = {19};
+UNetConfig unet_config_ = default_unet_config;
+
+int InitClassNum(const int &class_num) {
+  if(class_num > 0){
+    unet_config_.class_num = class_num;
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("UNet_parse"),
+                 "class_num = %d is not allowed, only support class_num > 0",
+                 class_num);
+    return -1;
+  }
+  return 0;
+}
+
+
+int LoadConfig(const rapidjson::Document &document) {
+  if (document.HasMember("class_num")){
+    int class_num = document["class_num"].GetInt();
+    if (InitClassNum(class_num) < 0) {
+      return -1;
+    }
+  }
+  return 0;
+}
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& node_output,
@@ -99,24 +128,44 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
   perception.seg.height = static_cast<int>(model_h * valid_h_ratio);
   perception.seg.width = static_cast<int>(model_w * valid_w_ratio);
   perception.seg.channel = channel;
-  perception.seg.num_classes = num_classes_;
+  perception.seg.num_classes = unet_config_.class_num;
 
   if (tensors[0]->properties.tensorType == HB_DNN_TENSOR_TYPE_F32) {
     float *data = tensors[0]->GetTensorData<float>();
-
-    for (int h = 0; h < valid_h; ++h) {
-      for (int w = 0; w < valid_w; ++w) {
-        float top_score = -1000000.0f;
-        int top_index = 0;
-        float* c_data = data + (seg_width * h + w) * channel;
-        for (int c = 0; c < channel; c++) {
-          if (c_data[c] > top_score) {
-            top_score = c_data[c];
-            top_index = c;
+    if (tensors[0]->properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {
+      for (int h = 0; h < valid_h; ++h) {
+        for (int w = 0; w < valid_w; ++w) {
+          float top_score = -1000000.0f;
+          int top_index = 0;
+          float* c_data = data + (seg_width * h + w) * channel;
+          for (int c = 0; c < channel; c++) {
+            if (c_data[c] > top_score) {
+              top_score = c_data[c];
+              top_index = c;
+            }
           }
+          perception.seg.seg[h * valid_w + w] = top_index;
+          perception.seg.data[h * valid_w + w] = static_cast<float>(top_index);
         }
-        perception.seg.seg[h * valid_w + w] = top_index;
-        perception.seg.data[h * valid_w + w] = static_cast<float>(top_index);
+      }
+    } else if (tensors[0]->properties.tensorLayout == HB_DNN_LAYOUT_NCHW) {
+      for (int h = 0; h < valid_h; ++h) {
+        for (int w = 0; w < valid_w; ++w) {
+          float top_score = -1e9;
+          int top_index = 0;
+
+          for (int c = 0; c < channel; ++c) {
+            // N=0, assume single batch
+            // Offset = c * H * W + h * W + w
+            float score = data[c * valid_h * valid_w + h * valid_w + w];
+            if (score > top_score) {
+              top_score = score;
+              top_index = c;
+            }
+          }
+          perception.seg.seg[h * valid_w + w] = top_index;
+          perception.seg.data[h * valid_w + w] = static_cast<float>(top_index);
+        }
       }
     }
   } else if (tensors[0]->properties.tensorType == HB_DNN_TENSOR_TYPE_S8) {
