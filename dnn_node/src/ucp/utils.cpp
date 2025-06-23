@@ -18,6 +18,21 @@ namespace hobot {
 namespace dnn_node {
 namespace output_parser {
 
+int get_tensor_layout(std::shared_ptr<DNNTensor> tensor) {
+  if (tensor->properties.quantizeAxis == HB_DNN_LAYOUT_NHWC) {
+    return HB_DNN_LAYOUT_NHWC;
+  } else if (tensor->properties.quantizeAxis == HB_DNN_LAYOUT_NCHW) {
+    return HB_DNN_LAYOUT_NCHW;
+  } else if (tensor->properties.quantizeAxis == HB_DNN_LAYOUT_NONE) {
+    if (tensor->properties.validShape.dimensionSize[3] <= tensor->properties.validShape.dimensionSize[1]) {
+      return HB_DNN_LAYOUT_NHWC;
+    } else {
+      return HB_DNN_LAYOUT_NCHW;
+    }
+  }
+  return -1;
+}
+
 int get_tensor_hwc_index(std::shared_ptr<DNNTensor> tensor,
                          int *h_index,
                          int *w_index,
@@ -31,9 +46,9 @@ int get_tensor_hwc_index(std::shared_ptr<DNNTensor> tensor,
     *h_index = 2;
     *w_index = 3;
   } else if (tensor->properties.quantizeAxis == HB_DNN_LAYOUT_NONE) {
-    *h_index = 1;
-    *w_index = 2;
-    *c_index = 3;
+    auto tensorlayout = get_tensor_layout(tensor);
+    TensorUtils::GetTensorHWCIndex(
+          tensorlayout, h_index, w_index, c_index);
   } else {
     return -1;
   }

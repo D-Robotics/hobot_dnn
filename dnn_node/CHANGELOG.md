@@ -1,5 +1,10 @@
 # Changelog for package dnn_node
 
+tros_2.5.1 (2024-06-23)
+------------------
+1. 适配 deeplabv3 分割模型。
+2. 新增对 s100 模型 tensorlayout 查询功能。
+
 tros_2.5.0 (2024-05-08)
 ------------------
 1. 适配 S100 平台。
