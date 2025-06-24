@@ -28,6 +28,12 @@ namespace dnn_node {
 namespace output_parser {
 
 /**
+ * @param[in] tensor
+ * @return tensorlayout
+ */
+int get_tensor_layout(std::shared_ptr<DNNTensor> tensor);
+
+/**
  *
  * @param[in] tensor
  * @param[out] h_index

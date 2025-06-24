@@ -101,10 +101,11 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
   int seg_height = tensors[0]->properties.validShape.dimensionSize[h_index];
   int seg_width = tensors[0]->properties.validShape.dimensionSize[w_index];
   int channel = tensors[0]->properties.validShape.dimensionSize[c_index];
+  int stride = tensors[0]->properties.stride[w_index] / tensors[0]->properties.stride[c_index];
 
   int aligned_channel = tensors[0]->properties.stride[c_index - 1] / tensors[0]->properties.stride[c_index];
 
-  RCLCPP_DEBUG(rclcpp::get_logger("UnetOutputParser"),
+  RCLCPP_INFO(rclcpp::get_logger("UnetOutputParser"),
                "PostProcess width: %d height: %d channel: %d",
                seg_width,
                seg_height,
@@ -126,14 +127,21 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
   perception.seg.channel = channel;
   perception.seg.num_classes = unet_config_.class_num;
 
+  #ifdef BPU_LIBDNN
+    auto tensorlayout = tensors[0]->properties.tensorLayout;
+  #endif
+  #ifdef BPU_UCP
+    auto tensorlayout = hobot::dnn_node::output_parser::get_tensor_layout(tensors[0]);
+  #endif
+
   if (tensors[0]->properties.tensorType == HB_DNN_TENSOR_TYPE_F32) {
     float *data = tensors[0]->GetTensorData<float>();
-    if (tensors[0]->properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {
+    if (tensorlayout == HB_DNN_LAYOUT_NHWC) {
       for (int h = 0; h < valid_h; ++h) {
         for (int w = 0; w < valid_w; ++w) {
           float top_score = -1000000.0f;
           int top_index = 0;
-          float* c_data = data + (seg_width * h + w) * channel;
+          float* c_data = data + (seg_width * h + w) * stride;
           for (int c = 0; c < channel; c++) {
             if (c_data[c] > top_score) {
               top_score = c_data[c];
@@ -144,7 +152,7 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
           perception.seg.data[h * valid_w + w] = static_cast<float>(top_index);
         }
       }
-    } else if (tensors[0]->properties.tensorLayout == HB_DNN_LAYOUT_NCHW) {
+    } else if (tensorlayout == HB_DNN_LAYOUT_NCHW) {
       for (int h = 0; h < valid_h; ++h) {
         for (int w = 0; w < valid_w; ++w) {
           float top_score = -1e9;
