@@ -120,7 +120,7 @@ if(PLATFORM_X3)
     src/output_parser/detection/nms.cpp
     src/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
     src/output_parser/detection/ptq_yolo2_output_parser.cpp
-    src/output_parser/detection/ptq_yolov5x_output_parser.cpp
+    src/output_parser/detection/ptq_yolo5_output_parser.cpp
     src/output_parser/detection/ptq_yolo8_output_parser.cpp
     src/output_parser/detection/ptq_yolo10_output_parser.cpp
     src/output_parser/detection/fasterrcnn_output_parser.cpp
