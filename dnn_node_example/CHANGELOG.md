@@ -1,5 +1,9 @@
 # Changelog for package dnn_node_example
 
+tros_2.5.2 (2025-07-02)
+------------------
+1. 新增x5 yolov11, yolov12模型。
+
 tros_2.5.0 (2025-05-08)
 ------------------
 1. 新增对S100算法适配。
