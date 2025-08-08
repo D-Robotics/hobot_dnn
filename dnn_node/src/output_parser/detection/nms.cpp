@@ -15,9 +15,29 @@
 #include "dnn_node/util/output_parser/detection/nms.h"
 
 #include <algorithm>
+#include <map>
 #include <vector>
 
 #define NMS_MAX_INPUT (400)
+
+int InitOutputOrder(const std::vector<int> &output_order, const int model_output_count){
+  
+  std::map<int, bool> order_map;
+  for (int i = 0; i < model_output_count; ++i) {
+      order_map[i] = false;
+  }
+
+  for(int i = 0; i < model_output_count; i++){
+    if(order_map[output_order[i]] == true){
+      return -1;
+    }
+    if(output_order[i] < 0 || output_order[i] > (model_output_count - 1)){
+      return -1;
+    }
+    order_map[output_order[i]] = true;
+  }
+  return 0;
+}
 
 void nms(std::vector<Detection> &input,
          float iou_threshold,

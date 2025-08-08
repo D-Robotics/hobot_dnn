@@ -22,6 +22,8 @@
 using hobot::dnn_node::output_parser::Detection;
 using hobot::dnn_node::output_parser::YOLOSeg;
 
+int InitOutputOrder(const std::vector<int> &output_order, const int model_output_count);
+
 /**
  * Non-maximum suppression
  * @param[in] input
