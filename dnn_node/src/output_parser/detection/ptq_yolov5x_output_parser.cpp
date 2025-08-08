@@ -197,35 +197,6 @@ int InitAnchorsTables(const std::vector<std::vector<std::vector<double>>> &ancho
   return 0;
 }
 
-int InitOutputOrder(const std::vector<int> &output_order){
-  size_t size_o = output_order.size();
-  std::map<int, bool> order_map = {
-    {0, false},
-    {1, false},
-    {2, false}
-};
-  if(size_o!=3){
-      RCLCPP_ERROR(rclcpp::get_logger("yolo10_detection_parser"),
-              "output order list size %d is not equal to 3",
-              size_o);
-      return -1;
-  }
-  for(int i = 0;i < 3; i++){
-    if(order_map[output_order[i]]==true){
-      RCLCPP_ERROR(rclcpp::get_logger("yolo10_detection_parser"),
-              "duplicate numbers appear in output order list");
-      return -1;
-    }
-    if(output_order[i] < 0 || output_order[i] > 2){
-      RCLCPP_ERROR(rclcpp::get_logger("yolo10_detection_parser"),
-              "invalid value appear in output order list");
-      return -1;
-    }
-    order_map[output_order[i]] = true;
-  }
-  return 0;
-}
-
 int LoadConfig(const rapidjson::Document &document) {
   int model_output_count = 0;
   if (document.HasMember("model_output_count")) {
@@ -287,8 +258,12 @@ int LoadConfig(const rapidjson::Document &document) {
     for(size_t i = 0; i < document["output_order"].Size(); i++){
       yolo5_config_.output_order.push_back(document["output_order"][i].GetInt());
     }
-    if(InitOutputOrder(yolo5_config_.output_order) < 0){
+    if(InitOutputOrder(yolo5_config_.output_order, model_output_count) < 0){
       return -1;
+    }
+  } else {
+    for (int i = 0; i < model_output_count; i++) {
+      yolo5_config_.output_order.push_back(i);
     }
   }
 
