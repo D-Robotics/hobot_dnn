@@ -1,5 +1,10 @@
 # Changelog for package dnn_node_example
 
+tros_2.5.5 (2025-08-15)
+------------------
+1. 新增 X5 yolov11, yolov12 模型
+2. 新增 S100 yolov11, yolov12 模型
+
 tros_2.5.3 (2025-07-14)
 ------------------
 1. 修复2.4.1rc2版本对检测头分支配置顺序后导致X3模型运行错误。
