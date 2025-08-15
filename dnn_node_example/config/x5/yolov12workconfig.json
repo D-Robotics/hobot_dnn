@@ -1,0 +1,14 @@
+{
+	"model_file": "/opt/hobot/model/x5/basic/yolov12n_detect_bayese_640x640_nv12_modified.bin",
+	"task_num": 4,
+	"dnn_Parser": "yolov8",
+	"model_output_count": 6,
+	"reg_max": 16,
+	"class_num": 80,
+	"cls_names_list": "config/coco.list",
+	"strides": [8, 16, 32],
+	"score_threshold": 0.25,
+	"nms_threshold": 0.7,
+	"nms_top_k": 300,
+	"output_order": [0,1,2,3,4,5]
+}
