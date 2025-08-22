@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_2.5.6 (2025-08-22)
+------------------
+1. 新增 s100 dnn node roi 推理模式。输出 output tensor 数量为 output_size x roi_size.
+
 tros_2.5.4 (2025-08-08)
 ------------------
 1. 修复 x3 yolov3 多分支推理推理失败问题。

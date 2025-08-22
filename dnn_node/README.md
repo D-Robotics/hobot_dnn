@@ -13,7 +13,7 @@ The DnnNode in the Dnn Node package is a virtual base class that defines the dat
 # Development Environment
 
 - Programming Language: C/C++
-- Development Platform: X3/Ultra/X5/X86
+- Development Platform: X3/Ultra/X5/S100/X86
 - System Version: Ubuntu 20.04/Ubuntu 22.04
 - Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 11.4.0
 
@@ -24,6 +24,8 @@ The DnnNode in the Dnn Node package is a virtual base class that defines the dat
 - Ultra: Supports compilation on Ultra Ubuntu system and cross-compilation using Docker on PC.
 
 - X5: Supports compilation on X5 Ubuntu system and cross-compilation using Docker on PC.
+
+- S100: Supports compilation on S100 Ubuntu system and cross-compilation using Docker on PC.
 
 - X86: Supports compilation on X86 Ubuntu system.
 
@@ -45,6 +47,10 @@ Compilation options can control the dependencies and functionalities of compilin
 
 - dnn: 1.23.5
 - opencv: 3.4.5
+
+### S100
+
+- ucp: 3.7.3
 
 ### X86
 

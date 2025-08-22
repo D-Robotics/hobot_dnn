@@ -94,8 +94,6 @@ class Task {
      */
     virtual int32_t WaitInferDone(int32_t timeout) = 0;
 
-    void Reset();
-
     /**
      * Set model
      * @param[in] model
@@ -109,8 +107,6 @@ class Task {
     TaskStatus task_status_;
     hbUCPTaskHandle_t task_handle_;
     hbUCPSchedParam ctrl_param_;
-    std::vector<hbDNNTensor> input_dnn_tensors_;
-    std::vector<hbDNNTensor> output_dnn_tensors_;
     std::mutex release_mtx_;
     std::mutex task_status_mutex_;
 

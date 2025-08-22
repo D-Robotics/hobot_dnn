@@ -43,6 +43,8 @@ class ModelInferTask : public Task {
 
   ModelInferTask();
 
+  ~ModelInferTask();
+
   int32_t SetModel(Model *model);
 
   int32_t ProcessInput() override;
@@ -50,8 +52,6 @@ class ModelInferTask : public Task {
   int32_t RunInfer() override;
 
   int32_t WaitInferDone(int32_t timeout) override;
-
-  void Reset();
 
   /**
    *  Set all inputs
@@ -86,6 +86,8 @@ class ModelInferTask : public Task {
 
  private:
   std::vector<std::pair<std::shared_ptr<DNNInput>, int>> inputs_;
+  std::vector<hbDNNTensor> input_dnn_tensors_;
+  std::vector<hbDNNTensor> output_dnn_tensors_;
   std::vector<std::shared_ptr<DNNTensor>> input_tensors_;
   std::vector<std::shared_ptr<DNNTensor>> output_tensors_;
 };

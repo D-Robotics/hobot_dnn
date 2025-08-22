@@ -217,7 +217,7 @@ elseif(PLATFORM_S100)
     src/${PREFIX_PATH}/easy_dnn/input_process.cpp
     src/${PREFIX_PATH}/easy_dnn/model.cpp
     src/${PREFIX_PATH}/easy_dnn/model_infer_task.cpp
-    # src/${PREFIX_PATH}/easy_dnn/model_roi_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_roi_infer_task.cpp
     src/${PREFIX_PATH}/easy_dnn/task.cpp
     src/output_parser/detection/nms.cpp
     src/threads/threadpool.cpp

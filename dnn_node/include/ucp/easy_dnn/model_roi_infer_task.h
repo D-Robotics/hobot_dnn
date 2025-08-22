@@ -36,21 +36,12 @@ class DNNInput;
 class DNNTensor;
 class Task;
 
-/**
- * A slice tensor ref to a tensor by offset & length
- */
-class DNNTensorSlice : public DNNTensor {
- public:
-  void Reset() override { tensor.reset(); }
-
-  // a ref just to hold the original tensor (smart pointer)
-  std::shared_ptr<DNNTensor> tensor;
-};
-
 class ModelRoiInferTask : public Task {
  public:
 
   ModelRoiInferTask();
+
+  ~ModelRoiInferTask();
 
   int32_t SetModel(Model *model);
 
@@ -59,8 +50,6 @@ class ModelRoiInferTask : public Task {
   int32_t RunInfer() override;
 
   int32_t WaitInferDone(int32_t timeout) override;
-
-  void Reset();
 
   /**
    * Set input rois (non-required)
@@ -109,20 +98,17 @@ class ModelRoiInferTask : public Task {
 
  private:
 
-  std::vector<hbDNNRoi> rois_;
+  // std::vector<hbDNNRoi> rois_;
+  std::vector<hbUCPSysMem> roi_mem_;
+  int roi_index_ = -1;
   std::vector<std::shared_ptr<DNNInput>> inputs_;
-  std::vector<std::shared_ptr<DNNTensor>> input_tensors_;
-  // batch layout roi{0-m}_output{0}...
-  //  roi{0-m}_output{n}
-  //  the size equals to modelOutputCount
   
-  std::vector<std::shared_ptr<DNNTensor>> output_tensors_;
-  // roi{0}_output{0} ... roi{0}_output{n} ...
-  //  roi{m}_output{0} ... roi{m}_output{n}
+  std::vector<std::vector<hbDNNTensor>> roi_input_dnn_tensors_;
+  std::vector<std::vector<std::shared_ptr<DNNTensor>>> roi_input_tensors_;
+
   //  the size equals to roiNum
+  std::vector<std::vector<hbDNNTensor>> roi_output_dnn_tensors_;
   std::vector<std::vector<std::shared_ptr<DNNTensor>>> roi_output_tensors_;
-  // record the real mem size for internal output tensor
-  std::vector<int32_t> real_mem_size_;
 };
 }  // namespace easy_dnn
 }  // namespace hobot

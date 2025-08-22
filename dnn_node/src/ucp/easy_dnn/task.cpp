@@ -82,10 +82,5 @@ int32_t Task::SetModel(Model *model) {
   return HB_DNN_SUCCESS;
 }
 
-void Task::Reset() {
-  input_dnn_tensors_.clear();
-  output_dnn_tensors_.clear();
-}
-
 }  // namespace easy_dnn
 }  // namespace hobot

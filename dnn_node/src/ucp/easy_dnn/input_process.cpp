@@ -128,5 +128,27 @@ int32_t CropProcessor::Process(std::shared_ptr<DNNTensor>& tensor,
   uv.memSize = ALIGN_32(aligned_width * valid_height / 2U);
   return 0;
 }
+
+int32_t FillProcessor::Process(std::shared_ptr<DNNTensor>& tensor,
+                               std::shared_ptr<DNNTensor>& tensor_separate,
+                               std::shared_ptr<DNNInput>& input) {
+  auto const pyramid_input{std::dynamic_pointer_cast<NV12PyramidInput>(input)};
+  if (pyramid_input == nullptr) {
+    return -1;
+  }
+
+  auto& y{tensor->sysMem};
+  y.phyAddr = pyramid_input->y_phy_addr;
+  y.virAddr = reinterpret_cast<uint8_t*>(pyramid_input->y_vir_addr);
+  y.memSize = pyramid_input->height * pyramid_input->width;
+
+  auto& uv{tensor_separate->sysMem};
+  uv.phyAddr = pyramid_input->uv_phy_addr;
+  uv.virAddr = reinterpret_cast<uint8_t*>(pyramid_input->uv_vir_addr);
+  uv.memSize = pyramid_input->height * pyramid_input->width / 2;
+
+  return 0;
+}
+
 }  // namespace easy_dnn
 }  // namespace hobot

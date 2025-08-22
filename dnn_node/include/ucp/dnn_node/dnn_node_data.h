@@ -31,7 +31,7 @@
 #include "easy_dnn/data_structure.h"
 #include "easy_dnn/model.h"
 #include "easy_dnn/model_infer_task.h"
-// #include "easy_dnn/model_roi_infer_task.h"
+#include "easy_dnn/model_roi_infer_task.h"
 #include "easy_dnn/task.h"
 
 namespace hobot {
@@ -42,7 +42,7 @@ using hobot::easy_dnn::DNNTensor;
 using hobot::easy_dnn::Model;
 
 using hobot::easy_dnn::ModelInferTask;
-// using hobot::easy_dnn::ModelRoiInferTask;
+using hobot::easy_dnn::ModelRoiInferTask;
 using hobot::easy_dnn::NV12PyramidInput;
 
 using hobot::easy_dnn::Task;
