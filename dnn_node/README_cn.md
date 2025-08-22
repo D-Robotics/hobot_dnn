@@ -15,7 +15,7 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 # 开发环境
 
 - 编程语言: C/C++
-- 开发平台: X3/Rdkultra/X5/X86
+- 开发平台: X3/Rdkultra/X5/S100/X86
 - 系统版本：Ubuntu 20.04/Ubuntu 22.04
 - 编译工具链:Linux GCC 9.3.0/Linaro GCC 11.4.0
 
@@ -26,6 +26,8 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 - Rdkultra版本：支持在Rdkultra Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
 - X5版本：支持在X5 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+
+- S100版本：支持在S100 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
 - X86版本：支持在X86 Ubuntu系统上编译一种方式。
 
@@ -45,11 +47,15 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 - dnn:1.23.5
 
+### S100 依赖
+
+- ucp:3.7.3
+
 ### X86 依赖
 
 - dnn:1.12.3
 
-## X3/Rdkultra/X5 Ubuntu系统上编译
+## X3/Rdkultra/X5/S100 Ubuntu系统上编译
 
 1、编译环境确认
 

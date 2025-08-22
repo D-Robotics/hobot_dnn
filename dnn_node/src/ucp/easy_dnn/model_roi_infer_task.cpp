@@ -25,75 +25,99 @@ int32_t ModelRoiInferTask::SetModel(Model *model) {
   }
 
   int32_t const input_count{model_->GetInputCount()};
-  input_tensors_.resize(static_cast<size_t>(input_count));
-  input_dnn_tensors_.resize(static_cast<size_t>(input_count));
 
-  int32_t const output_count{model->GetOutputCount()};
-  output_tensors_.resize(static_cast<size_t>(output_count));
-  output_dnn_tensors_.resize(static_cast<size_t>(output_count));
-  real_mem_size_.resize(static_cast<size_t>(output_count), 0);
+  for (int i = 0; i < input_count; i++) {
+    hbDNNTensorProperties properties;
+    model_->GetInputTensorProperties(properties, i);
+    int dim0 = properties.validShape.dimensionSize[0];
+    int dim1 = properties.validShape.dimensionSize[1];
+    int dim2 = properties.validShape.dimensionSize[2];
+    int dim3 = properties.validShape.dimensionSize[3];
+    int tensorType = properties.tensorType;
+    if (dim0 == 1 && dim1 == 4 && dim2 == 0 && dim3 == 0 
+          && tensorType == HB_DNN_TENSOR_TYPE_S32) {
+      roi_index_ = i;
+      break;
+    }
+  }
+  if (roi_index_ == -1) {
+    return HB_DNN_INVALID_MODEL;
+  }
 
   return HB_DNN_SUCCESS;
 }
 
 int32_t ModelRoiInferTask::SetInputRois(std::vector<hbDNNRoi> &rois) {
-  rois_ = rois;
-  int32_t const input_count{model_->GetInputCount()};
-  size_t const roi_num{rois.size()};
-  size_t const total_input_count{roi_num * static_cast<uint32_t>(input_count)};
+  auto roi_size = rois.size();
+  roi_mem_.resize(roi_size);
+  for (auto i = 0; i < roi_size; ++i) {
+    int32_t mem_size = 4 * sizeof(int32_t);
+    hbUCPMallocCached(&roi_mem_[i], mem_size, 0);
+    int32_t *roi_data = reinterpret_cast<int32_t *>(roi_mem_[i].virAddr);
+    // The order of filling in the corner points of roi tensor is left, top, right, bottom
+    roi_data[0] = rois[i].left;
+    roi_data[1] = rois[i].top;
+    roi_data[2] = rois[i].right;
+    roi_data[3] = rois[i].bottom;
+    // make sure cahced mem data is flushed to DDR before inference
+    hbUCPMemFlush(&roi_mem_[i], HB_SYS_MEM_CACHE_CLEAN);
+  }
 
-  inputs_.resize(total_input_count);
-  input_tensors_.resize(total_input_count);
-  input_dnn_tensors_.resize(total_input_count);
   return HB_DNN_SUCCESS;
 }
 
 int32_t ModelRoiInferTask::SetInputs(
     std::vector<std::shared_ptr<DNNInput>> &inputs) {
-  if (inputs.size() != inputs_.size()) {
+  auto roi_size = roi_mem_.size();
+  if (inputs.size() != roi_size) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-              "Inpus size [%zu] is not match setting size [%zu]", inputs.size(), inputs_.size());
+              "Input Size [%zu] Not Equal to Roi Size [%zu]!", inputs.size(), roi_size);
     return HB_DNN_INVALID_ARGUMENT;
   }
-
-  size_t const input_size{inputs_.size()};
-  for (size_t i{0U}; i < input_size; ++i) {
+  for (int32_t i{0}; i < inputs.size(); ++i) {
     if (!inputs[i]) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
                 "Set Inputs[%zu] failed", i);
       return HB_DNN_INVALID_ARGUMENT;
     }
-    inputs_[i] = inputs[i];
+    inputs_.push_back(inputs[i]);
   }
-  
-  input_dnn_tensors_.resize(inputs_.size());
   return HB_DNN_SUCCESS;
 }
 
 int32_t ModelRoiInferTask::SetInputTensors(
     std::vector<std::shared_ptr<DNNTensor>> &input_tensors) {
   size_t const input_size{input_tensors.size()};
-  if (input_size != input_tensors_.size()) {
+  int32_t const input_count{model_->GetInputCount()};
+
+  if (input_size != input_count - 1) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-          "input_size[%zu] is not equal to input_tensors_ size[%zu]", input_size, input_tensors_.size());
+          "input tensor size[%zu] is not equal to model input size[%zu]", input_size, input_count - 1);
     return HB_DNN_API_USE_ERROR;
   }
 
-  for (size_t i{0U}; i < input_size; ++i) {
-    if (input_tensors[i] == nullptr) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-          "input_tensors [%zu] is null", i);
-      return HB_DNN_INVALID_ARGUMENT;
+  auto roi_size = roi_mem_.size();
+  for (size_t n{0U}; n < roi_size; ++n) {
+    for (size_t i{0U}; i < input_size; ++i) {
+      if (input_tensors[i] == nullptr) {
+        RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
+            "input_tensors [%zu] is null", i);
+        return HB_DNN_INVALID_ARGUMENT;
+      }
+      roi_input_tensors_[n][i] = input_tensors[i];
+      roi_input_dnn_tensors_[n][i] = static_cast<hbDNNTensor>(*(input_tensors[i]));
     }
-    input_tensors_[i] = input_tensors[i];
-    input_dnn_tensors_[i] = static_cast<hbDNNTensor>(*(input_tensors[i]));
   }
   return HB_DNN_SUCCESS;
 }
 
 int32_t ModelRoiInferTask::GetOutputTensors(
     std::vector<std::shared_ptr<DNNTensor>> &output_tensors) {
-  output_tensors = output_tensors_;
+  for (int32_t n{0}; n < roi_output_tensors_.size(); n++) {
+    for (int32_t i{0}; i < roi_output_tensors_[n].size(); i++) {
+      output_tensors.push_back(roi_output_tensors_[n][i]);
+    }
+  }
   return HB_DNN_SUCCESS;
 }
 
@@ -104,39 +128,64 @@ int32_t ModelRoiInferTask::GetOutputTensors(
 }
 
 int32_t ModelRoiInferTask::ProcessInput() {
-  int32_t process_count{0};
-  int32_t const rois_size{static_cast<int32_t>(rois_.size())};
+  // checking output tensors, allocate if not set
+  int32_t roi_num{static_cast<int32_t>(roi_mem_.size())};
   int32_t const input_count{model_->GetInputCount()};
-  for (int32_t i{0}; i < rois_size; i++) {
-    for (int32_t j{0}; j < input_count; j++) {
-      int32_t const k{i * input_count + j};
-      if (inputs_[k] != nullptr) {
 
-        if (input_tensors_[k] == nullptr) {
-          
-          model_->GetInputTensorProperties(input_dnn_tensors_[k].properties, j);
-          input_tensors_[k] = std::shared_ptr<DNNTensor>(
-              static_cast<DNNTensor *>(&input_dnn_tensors_[k]),
-              [](DNNTensor *const tensor) {});
+  roi_input_dnn_tensors_.resize(static_cast<size_t>(roi_num));
+  roi_input_tensors_.resize(static_cast<size_t>(roi_num));
+
+  for (size_t i{0U}; i < inputs_.size(); i ++) {
+    roi_input_dnn_tensors_[i].resize(static_cast<size_t>(input_count));
+    roi_input_tensors_[i].resize(static_cast<size_t>(input_count));
+
+    if (inputs_[i] == nullptr) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
+      "DNNInput must be set for branch:{%zu}", i);
+      return HB_DNN_INVALID_ARGUMENT;
+    }
+
+    auto pyramid_input = std::dynamic_pointer_cast<NV12PyramidInput>(inputs_[i]);
+
+    for (size_t j{0U}; j < 2; j++) {
+      if (roi_input_tensors_[i][j] == nullptr) {
+        model_->GetInputTensorProperties(roi_input_dnn_tensors_[i][j].properties,
+                                        static_cast<int32_t>(j));
+
+        roi_input_tensors_[i][j] = std::shared_ptr<DNNTensor>(
+            static_cast<DNNTensor *>(&roi_input_dnn_tensors_[i][j]),
+            [](DNNTensor const *const tensor) {});
+                
+        roi_input_tensors_[i][j]->properties.validShape.dimensionSize[1] = pyramid_input->height;
+        roi_input_tensors_[i][j]->properties.validShape.dimensionSize[2] = pyramid_input->width;
+        if (j == 1) {
+          // uv input
+          roi_input_tensors_[i][j]->properties.validShape.dimensionSize[1] /= 2;
+          roi_input_tensors_[i][j]->properties.validShape.dimensionSize[2] /= 2;
         }
-
-        std::shared_ptr<CropConfig> input_conf = std::make_shared<CropConfig>();
-        std::shared_ptr<CropProcessor> input_processor = std::make_shared<CropProcessor>();
-        int ret = input_processor->Process(
-                input_tensors_[k], input_conf, inputs_[i]);
-        if (ret != HB_DNN_SUCCESS) {
-          RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-            "Input process failed, roi: %d, ret[%d]", i, HB_DNN_RUN_TASK_FAILED);
-          return HB_DNN_RUN_TASK_FAILED;
-        }
-
-        process_count++;
-      } else {
-        RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-            "DNNInput must be set for roi:{%d},branch{%d}", i, j);
-        return HB_DNN_API_USE_ERROR;
+        
+        // RDK S600 need ALIGN_64
+        roi_input_tensors_[i][j]->properties.stride[1] =
+              ALIGN_32(roi_input_tensors_[i][j]->properties.stride[2] *
+              roi_input_tensors_[i][j]->properties.validShape.dimensionSize[2]);
+        roi_input_tensors_[i][j]->properties.stride[0] =
+              roi_input_tensors_[i][j]->properties.stride[1] *
+              roi_input_tensors_[i][j]->properties.validShape.dimensionSize[1];
       }
     }
+
+    std::shared_ptr<FillProcessor> input_processor = std::make_shared<FillProcessor>();
+    int ret = input_processor->Process(
+            roi_input_tensors_[i][0], roi_input_tensors_[i][1], inputs_[i]);
+    if (ret != HB_DNN_SUCCESS) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
+        "Input process failed, input branch: %zu, ret[%d]", i, HB_DNN_RUN_TASK_FAILED);
+      return HB_DNN_RUN_TASK_FAILED;
+    }
+
+    model_->GetInputTensorProperties(roi_input_dnn_tensors_[i][roi_index_].properties, roi_index_);
+    roi_input_dnn_tensors_[i][roi_index_].sysMem = roi_mem_[i];
+    roi_input_dnn_tensors_[i][roi_index_].sysMem.memSize = 16;
   }
   SetStatus(TaskStatus::INPUT_PROCESS_DONE);
   return HB_DNN_SUCCESS;
@@ -149,17 +198,16 @@ int32_t ModelRoiInferTask::RunInfer() {
     return ret;
   }
 
-  auto *output_ptr{output_dnn_tensors_.data()};
-
   {
-    std::unique_lock<std::mutex> const lk{release_mtx_};
-    RETURN_IF_FAILED(hbDNNRoiInfer(&task_handle_,
-                                   &output_ptr,
-                                   input_dnn_tensors_.data(),
-                                   rois_.data(),
-                                   static_cast<int32_t>(rois_.size()),
-                                   model_->GetDNNHandle(),
-                                   &ctrl_param_));
+    std::unique_lock<std::mutex> const lk{release_mtx_};    
+    int32_t roi_num{static_cast<int32_t>(roi_mem_.size())};
+    for (int32_t n{0}; n < roi_num; n++) {
+      hbDNNInferV2(&task_handle_,
+                roi_output_dnn_tensors_[n].data(),
+                roi_input_dnn_tensors_[n].data(),
+                model_->GetDNNHandle());
+    }
+    hbUCPSubmitTask(task_handle_, &ctrl_param_);
   }
   SetStatus(TaskStatus::INFERRING);
   return HB_DNN_SUCCESS;
@@ -186,114 +234,46 @@ int32_t ModelRoiInferTask::WaitInferDone(int32_t timeout) {
 }
 
 int32_t ModelRoiInferTask::PrepareInferInputOutput() {
-  // check input tensors
-  int32_t roi_num{static_cast<int32_t>(rois_.size())};
+  // checking output tensors, allocate if not set
+  int32_t roi_num{static_cast<int32_t>(roi_mem_.size())};
+  auto const output_count{model_->GetOutputCount()};
 
-  auto const alloc_tensor{[this, &roi_num](
-                              int32_t const i,
-                              hbDNNTensorProperties properties) -> int32_t {
-    properties.validShape.dimensionSize[0] *= roi_num;
-    properties.validShape.dimensionSize[0] *= roi_num;
-    properties.alignedByteSize *= roi_num;
-    real_mem_size_[i] = properties.alignedByteSize;
-    RCLCPP_DEBUG(rclcpp::get_logger("dnn"), 
-        "Alloc output tensor for branch {%d} internal, alloc mem size {%d}.",
-        i,
-        real_mem_size_[i]);
-
-    auto const output_tensor{AllocateTensor(properties)};
-    if (output_tensor.get() == nullptr) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-        "Allocate tensor failed, output branch: %d", i);
-      return HB_DNN_OUT_OF_MEMORY;
-    }
-    output_tensors_[i] = output_tensor;
-    output_dnn_tensors_[i] = static_cast<hbDNNTensor>(*output_tensor);
-    return HB_DNN_SUCCESS;
-  }};
-
-  int32_t ret{HB_DNN_SUCCESS};
-  int32_t const output_count{model_->GetOutputCount()};
-
-  for (int32_t i{0}; i < output_count; ++i) {
-    hbDNNTensorProperties properties;
-    ret = model_->GetOutputTensorProperties(properties, i);
-    if (ret != HB_DNN_SUCCESS) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
-        "GetOutputTensorProperties for index {%d} internal failed!", i);
-      return ret;
-    }
-
-    int32_t const need_size{properties.alignedByteSize * roi_num};
-    if ((output_tensors_[i] != nullptr)) {
-      if (real_mem_size_[i] > need_size) {
-        RCLCPP_DEBUG(rclcpp::get_logger("dnn"), 
-            "Use EasyDNN internal tensor for branch {%d}, the real mem size is "
-            "{%d}, need mem size is {%d}.",
-            i,
-            real_mem_size_[i],
-            need_size);
-        properties.validShape.dimensionSize[0] *= roi_num;
-        properties.validShape.dimensionSize[0] *= roi_num;
-        properties.alignedByteSize *= roi_num;
-        output_dnn_tensors_[i].properties = properties;
-        output_tensors_[i]->properties = properties;
-      } else if (real_mem_size_[i] < need_size) {
-        RCLCPP_DEBUG  (rclcpp::get_logger("dnn"), 
-            "Alloc internal tensor for branch {%d}, current internal tensor real "
-            "mem size {%d} is not enough, need mem size is {%d}.",
-            i,
-            real_mem_size_[i],
-            need_size);
-        RETURN_IF_FAILED(alloc_tensor(i, properties));
-      } 
-    } else if (output_tensors_[i] == nullptr) {
-      RCLCPP_DEBUG  (rclcpp::get_logger("dnn"), 
-            "Alloc internal tensor for branch {%d}, alloc mem size {%d}.",
-            i,
-            need_size);
-      RETURN_IF_FAILED(alloc_tensor(i, properties));
-    } 
-  }
-
+  roi_output_dnn_tensors_.resize(static_cast<size_t>(roi_num));
   roi_output_tensors_.resize(static_cast<size_t>(roi_num));
-  for (int32_t i{0}; i < roi_num; ++i) {
-    roi_output_tensors_[i].resize(static_cast<size_t>(output_count));
-    for (int32_t j{0}; j < output_count; ++j) {
-      // Manager by pool to avoid small mem allocation (low
-      //   priority)
-      auto const slice{std::make_shared<DNNTensorSlice>()};
-      // split tensor by offset
-      slice->tensor = output_tensors_[j];
-      auto &properties{slice->properties};
-      // assign properties
-      properties = output_tensors_[j]->properties;
-      // update dimension
-      properties.validShape.dimensionSize[0] /= roi_num;
-      properties.validShape.dimensionSize[0] /= roi_num;
-      // update size
-      properties.alignedByteSize /= roi_num;
-      auto &sys_mem{slice->sysMem};
-      sys_mem = output_tensors_[j]->sysMem;
-      sys_mem.memSize = static_cast<uint32_t>(properties.alignedByteSize);
-      uint32_t const offset{
-          static_cast<uint32_t>(properties.alignedByteSize * i)};
-      sys_mem.phyAddr += offset;
-      sys_mem.virAddr = reinterpret_cast<uint8_t *>(sys_mem.virAddr) + offset;
-      roi_output_tensors_[i][j] = slice;
+
+  for (int32_t n{0}; n < roi_num; n++) {
+    roi_output_dnn_tensors_[n].resize(static_cast<size_t>(output_count));
+    roi_output_tensors_[n].resize(static_cast<size_t>(output_count));
+    for (int32_t i{0}; i < output_count; i++) {
+      if (roi_output_tensors_[n][i] == nullptr) {
+        model_->GetOutputTensorProperties(
+            roi_output_dnn_tensors_[n][i].properties, i);
+
+        // output tensor alloc pad mem
+        auto const output_tensor{AllocateTensor(
+            roi_output_dnn_tensors_[n][i].properties)};
+        if (output_tensor.get() == nullptr) {
+          RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
+                "Allocate tensor failed, output branch: %d", i);
+          return HB_DNN_OUT_OF_MEMORY;
+        }
+        roi_output_tensors_[n][i] = output_tensor;
+        roi_output_dnn_tensors_[n][i] = *output_tensor;
+      }  
     }
   }
   return HB_DNN_SUCCESS;
 }
 
-void ModelRoiInferTask::Reset() {
-  Task::Reset();
-  rois_.clear();
+ModelRoiInferTask::~ModelRoiInferTask() {
+  for (auto &roi_mem: roi_mem_) {
+    hbUCPFree(&roi_mem);
+  }
   inputs_.clear();
-  input_tensors_.clear();
+  roi_input_tensors_.clear();
+  roi_input_dnn_tensors_.clear();
+  roi_output_dnn_tensors_.clear();
   roi_output_tensors_.clear();
-  output_tensors_.clear();
-  real_mem_size_.clear();
 }
 
 }  // namespace easy_dnn

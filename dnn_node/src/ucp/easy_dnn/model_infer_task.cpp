@@ -80,10 +80,11 @@ int32_t ModelInferTask::GetOutputTensors(
   return HB_DNN_SUCCESS;
 }
 
-void ModelInferTask::Reset() {
-  Task::Reset();
+ModelInferTask::~ModelInferTask() {
   inputs_.clear();
+  input_dnn_tensors_.clear();
   input_tensors_.clear();
+  output_dnn_tensors_.clear();
   output_tensors_.clear();
 }
 
@@ -221,7 +222,7 @@ int32_t ModelInferTask::PrepareInferInputOutput() {
       if (output_tensor.get() == nullptr) {
         RCLCPP_ERROR(rclcpp::get_logger("dnn"), 
               "Allocate tensor failed, output branch: %d", i);
-        return HB_DNN_API_USE_ERROR;
+        return HB_DNN_OUT_OF_MEMORY;
       }
       output_tensors_[i] = output_tensor;
       output_dnn_tensors_[i] = *output_tensor;

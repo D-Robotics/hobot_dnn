@@ -290,29 +290,29 @@ int DnnNodeImpl::PreProcess(
       return -1;
     }
 
-    // std::shared_ptr<ModelRoiInferTask> infer_task =
-    //     std::dynamic_pointer_cast<ModelRoiInferTask>(GetTask(task_id));
-    // if (!infer_task) {
-    //   RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid infer task");
-    //   return -1;
-    // }
+    std::shared_ptr<ModelRoiInferTask> infer_task =
+        std::dynamic_pointer_cast<ModelRoiInferTask>(GetTask(task_id));
+    if (!infer_task) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid infer task");
+      return -1;
+    }
 
-    // // set roi
-    // ret = infer_task->SetInputRois(*rois);
-    // if (ret != 0) {
-    //   RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Failed to set roi inputs");
-    //   return ret;
-    // }
-    // if (input_type == InputType::DNN_INPUT) {
-    //   ret = infer_task->SetInputs(inputs);
-    // } else if (input_type == InputType::DNN_TENSOR) {
-    //   ret = infer_task->SetInputTensors(tensor_inputs);
-    // } else {
-    //   RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-    //                "Unsupport input_type: %d",
-    //                static_cast<int>(input_type));
-    //   return -1;
-    // }
+    // set roi
+    ret = infer_task->SetInputRois(*rois);
+    if (ret != 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Failed to set roi inputs");
+      return ret;
+    }
+    if (input_type == InputType::DNN_INPUT) {
+      ret = infer_task->SetInputs(inputs);
+    } else if (input_type == InputType::DNN_TENSOR) {
+      ret = infer_task->SetInputTensors(tensor_inputs);
+    } else {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+                   "Unsupport input_type: %d",
+                   static_cast<int>(input_type));
+      return -1;
+    }
     if (ret != 0) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Failed to set inputs");
       return ret;
@@ -423,10 +423,10 @@ int DnnNodeImpl::RunInferTask(std::shared_ptr<DnnNodeOutput> node_output,
   } 
   else if (ModelTaskType::ModelRoiInferType ==
              dnn_node_para_ptr_->model_task_type) {
-    // auto model_task = std::dynamic_pointer_cast<ModelRoiInferTask>(task);
-    
+    auto model_task = std::dynamic_pointer_cast<ModelRoiInferTask>(task);
+
     // 解析DNNTensor，内部会为算法的每个branch输出调用自定义的Parse接口进行解析
-    // model_task->GetOutputTensors(node_output->output_tensors);
+    model_task->GetOutputTensors(node_output->output_tensors);
   }
 
   if (ret != 0) {
@@ -463,13 +463,13 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
   else if (ModelTaskType::ModelRoiInferType ==
              dnn_node_para_ptr_->model_task_type) {
 
-    // task = std::make_shared<hobot::easy_dnn::ModelRoiInferTask>();
-    // if (!task) {
-    //   RCLCPP_ERROR(rclcpp::get_logger("dnn"), "GetModelRoiInferTask fail");
-    //   return task_id;
-    // }
-    // std::dynamic_pointer_cast<ModelRoiInferTask>(task)->SetModel(
-    //     dnn_rt_para_->model_manage);
+    task = std::make_shared<hobot::easy_dnn::ModelRoiInferTask>();
+    if (!task) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "GetModelRoiInferTask fail");
+      return task_id;
+    }
+    std::dynamic_pointer_cast<ModelRoiInferTask>(task)->SetModel(
+        dnn_rt_para_->model_manage);
   }
   else {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"),
@@ -756,7 +756,7 @@ int DnnNodeImpl::RunImpl(
   // 检查任务是否正常
   auto infer_task = std::dynamic_pointer_cast<Task>(GetTask(task_id));
   if (!infer_task) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid infer task");
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "infer task error");
     return -1;
   }
 

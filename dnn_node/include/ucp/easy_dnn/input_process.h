@@ -69,6 +69,13 @@ class CropProcessor {
                   std::shared_ptr<DNNInput>& input);
 };
 
+class FillProcessor {
+ public:
+  int32_t Process(std::shared_ptr<DNNTensor>& tensor,
+                  std::shared_ptr<DNNTensor>& tensor_separate,
+                  std::shared_ptr<DNNInput>& input);
+};
+
 }  // namespace easy_dnn
 }  // namespace hobot
 
