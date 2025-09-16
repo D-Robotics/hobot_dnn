@@ -75,6 +75,19 @@ struct Point_ {
   Dtype x = 0;
   Dtype y = 0;
   float score = 0.0;
+  Point_ operator+(const Point_& other) const {
+        return Point_(x + other.x, y + other.y, score);
+    }
+  Point_ operator-(const Point_& other) const {
+        return Point_(x - other.x, y - other.y, score);
+    }
+  Point_ operator/(float divisor) const {
+    return Point_(x / divisor, y / divisor, score);
+  }
+
+  Point_ operator*(float factor) const {
+    return Point_(x * factor, y * factor, score);
+  }
 };
 typedef Point_<float> Point;
 typedef std::vector<Point> Landmarks;
