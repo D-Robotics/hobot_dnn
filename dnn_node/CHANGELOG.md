@@ -1,5 +1,10 @@
 # Changelog for package dnn_node
 
+tros_2.5.7 (2025-09-16)
+------------------
+1. 新增 Point_ 加减乘除重载运算。
+2. 新增 hbDNNRoi 构造函数。
+
 tros_2.5.6 (2025-08-22)
 ------------------
 1. 新增 s100 dnn node roi 推理模式。输出 output tensor 数量为 output_size x roi_size.
