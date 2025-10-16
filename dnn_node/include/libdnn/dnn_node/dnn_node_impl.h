@@ -81,7 +81,6 @@ struct DnnNodeRunTimeFpsStat {
 
   bool Update();
   float Get();
-  int GetInferTime();
 };
 
 struct ThreadPool {

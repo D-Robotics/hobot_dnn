@@ -191,7 +191,7 @@ def generate_launch_description():
             {"msg_pub_topic_name": LaunchConfiguration(
                 "dnn_example_msg_pub_topic_name")}
         ],
-        arguments=['--ros-args', '--log-level', 'error']
+        arguments=['--ros-args', '--log-level', 'warn']
     )
 
     shared_mem_node = IncludeLaunchDescription(

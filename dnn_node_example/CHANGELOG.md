@@ -1,5 +1,9 @@
 # Changelog for package dnn_node_example
 
+tros_2.5.8 (2025-10-16)
+------------------
+1. 修复 component 编译报错问题。
+
 tros_2.5.5 (2025-08-15)
 ------------------
 1. 新增 X5 yolov11, yolov12 模型
