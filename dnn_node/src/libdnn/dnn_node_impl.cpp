@@ -41,7 +41,6 @@ bool DnnNodeRunTimeFpsStat::Update() {
   if (interval >= 1000) {
     frame_fps = static_cast<float>(frame_count) /
                 (static_cast<float>(interval) / 1000.0);
-    infer_time =  static_cast<int>(static_cast<float>(interval) / static_cast<float>(frame_count));
     frame_count = 0;
     *last_frame_tp = std::chrono::system_clock::now();
     return true;
@@ -52,11 +51,6 @@ bool DnnNodeRunTimeFpsStat::Update() {
 float DnnNodeRunTimeFpsStat::Get() {
   std::unique_lock<std::mutex> lk(frame_stat_mtx);
   return frame_fps;
-}
-
-int DnnNodeRunTimeFpsStat::GetInferTime() {
-  std::unique_lock<std::mutex> lk(frame_stat_mtx);
-  return infer_time;
 }
 
 DnnNodeImpl::DnnNodeImpl(std::shared_ptr<DnnNodePara> &dnn_node_para_ptr) {
@@ -401,6 +395,8 @@ int DnnNodeImpl::RunInferTask(std::shared_ptr<DnnNodeOutput> node_output,
     }
   }
 
+  auto tp_now = std::chrono::system_clock::now();
+
   ret = task->WaitInferDone(timeout_ms);
   if (ret != 0) {
     RCLCPP_ERROR(
@@ -409,9 +405,14 @@ int DnnNodeImpl::RunInferTask(std::shared_ptr<DnnNodeOutput> node_output,
   }
 
   if (node_output->rt_stat) {
+    node_output->rt_stat->infer_time_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now() - tp_now)
+          .count();
+
     node_output->rt_stat->infer_timespec_start = timespec_now;
     clock_gettime(CLOCK_REALTIME, &timespec_now);
-    node_output->rt_stat->infer_timespec_end = timespec_now;
+    node_output->rt_stat->infer_timespec_end = timespec_now;    
   }
 
   if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
@@ -776,7 +777,6 @@ int DnnNodeImpl::RunImpl(
     // 统计输出fps
     dnn_output->rt_stat->fps_updated = output_stat_.Update();
     dnn_output->rt_stat->output_fps = output_stat_.Get();
-    dnn_output->rt_stat->infer_time_ms = output_stat_.GetInferTime();
   }
 
   // 5 推理任务资源释放
