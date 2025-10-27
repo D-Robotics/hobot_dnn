@@ -702,6 +702,16 @@ int DnnExampleNode::PostProcess(
   }
 
   // 填充perf性能统计信息
+  // Image collection and communication delay
+  ai_msgs::msg::Perf perf_recved_img;
+  perf_recved_img.set__type(model_name_ + "_recvedimg");
+  perf_recved_img.set__stamp_start(parser_output->msg_header->stamp);
+  perf_recved_img.set__stamp_end(
+      ConvertToRosTime(parser_output->preprocess_timespec_start));
+  perf_recved_img.set__time_ms_duration(CalTimeMsDuration(
+      perf_recved_img.stamp_start, perf_recved_img.stamp_end));
+  pub_data->perfs.emplace_back(perf_recved_img);
+
   // 前处理统计
   ai_msgs::msg::Perf perf_preprocess;
   perf_preprocess.set__type(model_name_ + "_preprocess");
@@ -778,13 +788,18 @@ int DnnExampleNode::PostProcess(
     if (node_output->rt_stat->fps_updated) {
       RCLCPP_WARN(this->get_logger(),
                   "Sub img fps: %.2f, Smart fps: %.2f, "
+                  "recved img time delay ms: %d, "
                   "pre process time ms: %d, infer time ms: %d, "
-                  "post process time ms: %d",
+                  "post process time ms: %d, "
+                  "pipeline time ms: %d",
                   node_output->rt_stat->input_fps,
                   node_output->rt_stat->output_fps,
+                  static_cast<int>(perf_recved_img.time_ms_duration),
                   static_cast<int>(perf_preprocess.time_ms_duration),
                   node_output->rt_stat->infer_time_ms,
-                  static_cast<int>(perf_postprocess.time_ms_duration));
+                  static_cast<int>(perf_postprocess.time_ms_duration),
+                  static_cast<int>(perf_pipeline.time_ms_duration)
+                );
     }
   }
 
@@ -893,6 +908,8 @@ void DnnExampleNode::RosImgProcess(
     return;
   }
 
+  struct timespec time_start = {0, 0};
+  clock_gettime(CLOCK_REALTIME, &time_start);
 
   std::stringstream ss;
   ss << "Recved img encoding: " << img_msg->encoding
@@ -1039,6 +1056,12 @@ void DnnExampleNode::RosImgProcess(
   if (dump_render_img_) {
     dnn_output->pyramid = pyramid;
   }
+
+  // Update preprocess perf info
+  dnn_output->preprocess_timespec_start = time_start;
+  struct timespec time_now = {0, 0};
+  clock_gettime(CLOCK_REALTIME, &time_now);
+  dnn_output->preprocess_timespec_end = time_now;
 
   // 4. 开始预测
   int ret = Run(inputs, dnn_output, nullptr);
