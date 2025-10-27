@@ -62,6 +62,11 @@ elseif(PLATFORM_S100)
   add_definitions(-DPLATFORM_S100)
   add_definitions(-DBPU_UCP)
   set(PREFIX_PATH ucp)
+elseif(PLATFORM_S600)
+  message("build platform S600")
+  add_definitions(-DPLATFORM_S600)
+  add_definitions(-DBPU_UCP)
+  set(PREFIX_PATH ucp)
 elseif(PLATFORM_X86)
   message("build platform x86")
   add_definitions(-DPLATFORM_X86)
@@ -209,6 +214,40 @@ elseif(PLATFORM_X5)
     hbrt_bayes_aarch64
   )
 elseif(PLATFORM_S100)
+  add_library(${PROJECT_NAME} SHARED
+    src/dnn_node.cpp
+    src/${PREFIX_PATH}/dnn_node_impl.cpp
+    src/${PREFIX_PATH}/image_proc.cpp
+    src/${PREFIX_PATH}/utils.cpp
+    src/${PREFIX_PATH}/easy_dnn/input_process.cpp
+    src/${PREFIX_PATH}/easy_dnn/model.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/model_roi_infer_task.cpp
+    src/${PREFIX_PATH}/easy_dnn/task.cpp
+    src/output_parser/detection/nms.cpp
+    src/threads/threadpool.cpp
+    src/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/output_parser/detection/ptq_yolov5x_output_parser.cpp
+    src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ptq_yolo10_output_parser.cpp
+    # src/output_parser/detection/fasterrcnn_output_parser.cpp
+    # src/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    # src/output_parser/detection/ptq_ssd_output_parser.cpp
+    # src/output_parser/detection/fcos_output_parser.cpp
+    src/output_parser/classification/ptq_classification_output_parser.cpp
+    src/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
+    # src/output_parser/segmentation/ptq_stdc_output_parser.cpp
+  )
+  target_link_libraries(${PROJECT_NAME}
+    dnn
+    hbucp
+    pthread
+    rt
+    dl
+  )
+elseif(PLATFORM_S600)
   add_library(${PROJECT_NAME} SHARED
     src/dnn_node.cpp
     src/${PREFIX_PATH}/dnn_node_impl.cpp
