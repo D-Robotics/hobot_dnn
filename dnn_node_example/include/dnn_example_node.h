@@ -19,7 +19,11 @@
 #include "ai_msgs/msg/capture_targets.hpp"
 #include "ai_msgs/msg/perception_targets.hpp"
 #include "ai_msgs/msg/perception_info.hpp"
-#include "cv_bridge/cv_bridge.h"
+#ifdef CV_BRIDGE_CPP
+#include <cv_bridge/cv_bridge.hpp>
+#else
+#include <cv_bridge/cv_bridge.h>
+#endif
 #include "dnn_node/dnn_node.h"
 #include "dnn_node/util/image_proc.h"
 #include "rclcpp/rclcpp.hpp"
