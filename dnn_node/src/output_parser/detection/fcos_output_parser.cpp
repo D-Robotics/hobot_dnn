@@ -284,14 +284,14 @@ void CqatGetBboxAndScoresScaleNHWC(std::vector<std::shared_ptr<DNNTensor>> &tens
     float *ce_scale = tensors[i + 10]->properties.scale.scaleData;
 
     // 同一个尺度下，tensor[i],tensor[i+5],tensor[i+10]出来的hw都一致，64*64/32*32/...
-    int tensor_h = tensors[i]->properties.stride[0] / tensors[i]->properties.stride[1];
-    int tensor_w = tensors[i]->properties.stride[1] / tensors[i]->properties.stride[2];
-    int tensor_c = tensors[i]->properties.stride[2] / tensors[i]->properties.stride[3];
-
+    int *shape = tensors[i]->properties.alignedShape.dimensionSize;
+    int tensor_h = shape[1];
+    int tensor_w = shape[2];
+    int tensor_c = shape[3];
     int32_t bbox_c_stride{
-        tensors[i + 5]->properties.validShape.dimensionSize[1]};
+        tensors[i + 5]->properties.alignedShape.dimensionSize[3]};
     int32_t ce_c_stride{
-        tensors[i + 10]->properties.validShape.dimensionSize[1]};
+        tensors[i + 10]->properties.alignedShape.dimensionSize[3]};
 
     for (int h = 0; h < tensor_h; h++) {
       for (int w = 0; w < tensor_w; w++) {
@@ -402,9 +402,10 @@ void GetBboxAndScoresNCHW(std::vector<std::shared_ptr<DNNTensor>> &tensors,
     float *ce_data = tensors[i + 10]->GetTensorData<float>();
 
     // 同一个尺度下，tensor[i],tensor[i+5],tensor[i+10]出来的hw都一致，64*64/32*32/...
-    int tensor_c = tensors[i]->properties.stride[0] / tensors[i]->properties.stride[1];
-    int tensor_h = tensors[i]->properties.stride[1] / tensors[i]->properties.stride[2];
-    int tensor_w = tensors[i]->properties.stride[2] / tensors[i]->properties.stride[3];
+    int *shape = tensors[i]->properties.alignedShape.dimensionSize;
+    int tensor_c = shape[1];
+    int tensor_h = shape[2];
+    int tensor_w = shape[3];
     int aligned_hw = tensor_h * tensor_w;
 
     for (int h = 0; h < tensor_h; h++) {
@@ -460,7 +461,6 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
   int h_index, w_index, c_index;
   int ret = hobot::dnn_node::output_parser::get_tensor_hwc_index(
       tensors[0], &h_index, &w_index, &c_index);
-#ifdef BPU_LIBDNN
   if (ret != 0 &&
       static_cast<int32_t>(fcos_config_.class_names.size()) !=
           tensors[0]->properties.alignedShape.dimensionSize[c_index]) {
@@ -471,7 +471,6 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
                 fcos_config_.class_names.size(),
                 tensors[0]->properties.alignedShape.dimensionSize[c_index]);
   }
-#endif
   for (size_t i = 0; i < tensors.size(); i++) {
     if (!tensors[i]) {
       RCLCPP_ERROR(rclcpp::get_logger("fcos_example"),
@@ -493,15 +492,9 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
     yolo5_nms(dets, nms_threshold_, nms_top_k_, perception.det, false);
     return 0;
   }
-  #ifdef BPU_LIBDNN
-    auto tensorlayout = tensors[0]->properties.tensorLayout;
-  #endif
-  #ifdef BPU_UCP
-    auto tensorlayout = tensors[0]->properties.quantizeAxis;
-  #endif
-  if (tensorlayout == HB_DNN_LAYOUT_NHWC) {
+  if (tensors[0]->properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {
     GetBboxAndScoresNHWC(tensors, dets);
-  } else if (tensorlayout == HB_DNN_LAYOUT_NCHW) {
+  } else if (tensors[0]->properties.tensorLayout == HB_DNN_LAYOUT_NCHW) {
     GetBboxAndScoresNCHW(tensors, dets);
   } else {
     RCLCPP_ERROR(rclcpp::get_logger("fcos_example"), "tensor layout error.");
