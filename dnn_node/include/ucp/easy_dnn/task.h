@@ -41,6 +41,15 @@
 
 #define ALIGN(value, alignment) (((value) + ((alignment)-1)) & ~((alignment)-1))
 #define ALIGN_32(value) ALIGN(value, 32)
+#define ALIGN_64(value) ALIGN(value, 64)
+
+#ifdef PLATFORM_S100
+#define BPU_ALIGN(value) ALIGN_32(value)
+#elif defined(PLATFORM_S600)
+#define BPU_ALIGN(value) ALIGN_64(value)
+#else
+#define BPU_ALIGN(value) ALIGN_32(value)
+#endif
 
 namespace hobot {
 namespace easy_dnn {

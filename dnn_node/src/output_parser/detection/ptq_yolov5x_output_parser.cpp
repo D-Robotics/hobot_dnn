@@ -297,6 +297,7 @@ void ParseTensor(std::shared_ptr<DNNTensor> tensor,
                  "get_tensor_hw failed");
   }
 
+  int channel_aligned = tensor->properties.stride[2] / tensor->properties.stride[3];
   int anchor_num = anchors.size();
   auto quanti_type = tensor->properties.quantiType;
   RCLCPP_DEBUG(rclcpp::get_logger("Yolo5_detection_parser"),
@@ -355,7 +356,7 @@ void ParseTensor(std::shared_ptr<DNNTensor> tensor,
               bbox,
               yolo5_config_.class_names[static_cast<int>(id)].c_str());
         }
-        data = data + num_pred * anchors.size();
+        data = data + channel_aligned;
       }
     }
   } else if (quanti_type == hbDNNQuantiType::SCALE) {

@@ -262,6 +262,12 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
 
   int height, width;
   hobot::dnn_node::output_parser::get_tensor_hw(tensors[0], &height, &width);
+#ifdef BPU_UCP
+  int channel_aligned = tensors[0]->properties.stride[2] / tensors[0]->properties.stride[3];
+#else
+  int channel_aligned = num_pred * anchors_table.size();
+#endif
+
   // int *shape = tensor->data_shape.d;
   for (int h = 0; h < height; h++) {
     for (int w = 0; w < width; w++) {
@@ -313,7 +319,7 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
                       bbox,
                       yolo2_config_.class_names[static_cast<int>(id)].c_str()));
       }
-      data = data + num_pred * anchors_table.size();
+      data = data + channel_aligned;
     }
   }
 

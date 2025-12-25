@@ -164,9 +164,8 @@ int32_t ModelRoiInferTask::ProcessInput() {
           roi_input_tensors_[i][j]->properties.validShape.dimensionSize[2] /= 2;
         }
         
-        // RDK S600 need ALIGN_64
         roi_input_tensors_[i][j]->properties.stride[1] =
-              ALIGN_32(roi_input_tensors_[i][j]->properties.stride[2] *
+              BPU_ALIGN(roi_input_tensors_[i][j]->properties.stride[2] *
               roi_input_tensors_[i][j]->properties.validShape.dimensionSize[2]);
         roi_input_tensors_[i][j]->properties.stride[0] =
               roi_input_tensors_[i][j]->properties.stride[1] *

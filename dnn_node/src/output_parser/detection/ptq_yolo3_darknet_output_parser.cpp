@@ -364,6 +364,11 @@ void PostProcessNHWC(std::shared_ptr<DNNTensor> tensor,
   if (ret != 0) {
     RCLCPP_WARN(rclcpp::get_logger("dnn_ptq_yolo3"), "get_tensor_hw failed");
   }
+#ifdef BPU_UCP
+  int channel_aligned = tensor->properties.stride[2] / tensor->properties.stride[3];
+#else
+  int channel_aligned = num_pred * anchors.size()
+#endif
 
   for (int h = 0; h < height; h++) {
     for (int w = 0; w < width; w++) {
@@ -414,7 +419,7 @@ void PostProcessNHWC(std::shared_ptr<DNNTensor> tensor,
                       bbox,
                       yolo3_config_.class_names[static_cast<int>(id)].c_str()));
       }
-      data = data + num_pred * anchors.size();
+      data = data + channel_aligned;
     }
   }
 }

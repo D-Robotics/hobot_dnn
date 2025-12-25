@@ -119,9 +119,9 @@ int32_t ModelInferTask::ProcessInput() {
         input_tensors_[idx + j] = std::shared_ptr<DNNTensor>(
             static_cast<DNNTensor *>(&input_dnn_tensors_[idx + j]),
             [](DNNTensor const *const tensor) {});
-        
+
         input_tensors_[idx + j]->properties.stride[1] =
-              ALIGN_32(input_tensors_[idx + j]->properties.stride[2] *
+              BPU_ALIGN(input_tensors_[idx + j]->properties.stride[2] *
               input_tensors_[idx + j]->properties.validShape.dimensionSize[2]);
         input_tensors_[idx + j]->properties.stride[0] =
               input_tensors_[idx + j]->properties.stride[1] *
