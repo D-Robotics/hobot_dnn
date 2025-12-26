@@ -523,6 +523,9 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
 #ifdef PLATFORM_S100
   en_set_task_para_ = false;
 #endif
+#ifdef PLATFORM_S600
+  en_set_task_para_ = false;
+#endif
 
   if (en_set_task_para_) {
     // 允许配置task参数

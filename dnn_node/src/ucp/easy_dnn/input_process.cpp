@@ -19,9 +19,7 @@
 
 #include "easy_dnn/common.h"
 #include "easy_dnn/data_structure.h"
-
-#define ALIGN(value, alignment) (((value) + ((alignment)-1)) & ~((alignment)-1))
-#define ALIGN_32(value) ALIGN(value, 32)
+#include "easy_dnn/task.h"
 
 namespace hobot {
 namespace easy_dnn {
@@ -97,8 +95,6 @@ int32_t CropProcessor::Process(std::shared_ptr<DNNTensor>& tensor,
 
   properties.validShape.dimensionSize[h_index] = valid_height;
   properties.validShape.dimensionSize[w_index] = valid_width;
-  properties.validShape.dimensionSize[h_index] = valid_height;
-  properties.validShape.dimensionSize[w_index] = aligned_width;
 
   int32_t const y_offset{crop_config->y * pyramid_input->y_stride + crop_config->x};
   y.phyAddr = pyramid_input->y_phy_addr + static_cast<uint64_t>(y_offset);
@@ -117,15 +113,14 @@ int32_t CropProcessor::Process(std::shared_ptr<DNNTensor>& tensor,
   //          |      |     |     |
   //          |      |     |     |
   //          --------------------
-  y.memSize = ALIGN_32(aligned_width * valid_height);
-  
+  y.memSize = BPU_ALIGN(aligned_width * valid_height);
   auto& uv{tensor_separate->sysMem};
   int32_t const uv_offset{
       crop_config->y / 2 * pyramid_input->uv_stride + crop_config->x};
   uv.phyAddr = pyramid_input->uv_phy_addr + static_cast<uint64_t>(uv_offset);
   uv.virAddr =
       reinterpret_cast<uint8_t*>(pyramid_input->uv_vir_addr) + uv_offset;
-  uv.memSize = ALIGN_32(aligned_width * valid_height / 2U);
+  uv.memSize = BPU_ALIGN(aligned_width * valid_height / 2U);
   return 0;
 }
 

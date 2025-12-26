@@ -1,5 +1,9 @@
 # Changelog for package dnn_node_example
 
+tros_2.6.0 (2025-12-25)
+------------------
+1. 新增 RDK S600 算法推理示例。
+
 tros_2.5.8 (2025-10-16)
 ------------------
 1. 修复 component 编译报错问题。

@@ -56,12 +56,17 @@ int get_tensor_hwc_index(std::shared_ptr<DNNTensor> tensor,
 }
 
 int get_tensor_hw(std::shared_ptr<DNNTensor> tensor, int *height, int *width) {
+#ifdef BPU_LIBDNN
   int h_index = 0;
   int w_index = 0;
   int c_index = 0;
   get_tensor_hwc_index(tensor, &h_index, &w_index, &c_index);
   *height = tensor->properties.validShape.dimensionSize[h_index];
   *width = tensor->properties.validShape.dimensionSize[w_index];
+#else
+  *height = tensor->properties.validShape.dimensionSize[1];
+  *width = tensor->properties.validShape.dimensionSize[2];
+#endif
   return 0;
 }
 

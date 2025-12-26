@@ -1,0 +1,5 @@
+{
+	"model_file": "/opt/hobot/model/s600/basic/deeplabv3plus_efficientnetb0_1024x2048_nv12.hbm",
+	"dnn_Parser": "unet",
+	"model_output_count": 1
+}

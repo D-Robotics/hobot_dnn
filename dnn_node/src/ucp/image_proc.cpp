@@ -57,7 +57,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
     const int &scaled_img_width) {
   auto *y = new hbUCPSysMem;
   auto *uv = new hbUCPSysMem;
-  auto w_stride = ALIGN_16(scaled_img_width);
+  auto w_stride = BPU_ALIGN(scaled_img_width);
   hbUCPMallocCached(y, scaled_img_height * w_stride, 0);
   hbUCPMallocCached(uv, scaled_img_height / 2 * w_stride, 0);
   //内存初始化
@@ -123,7 +123,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
   }
   // 图像位于中间，在四周pad
   // 2 计算padding参数
-  auto w_stride = ALIGN_16(scaled_img_width);
+  auto w_stride = BPU_ALIGN(scaled_img_width);
   if (w_stride > in_img_width) {
     // 需要在左边padding空相素
     padding_l = (w_stride - in_img_width) / 2;
@@ -210,7 +210,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGRImg(
   auto *y = new hbUCPSysMem;
   auto *uv = new hbUCPSysMem;
 
-  auto w_stride = ALIGN_16(scaled_img_width);
+  auto w_stride = BPU_ALIGN(scaled_img_width);
   hbUCPMallocCached(y, scaled_img_height * w_stride, 0);
   hbUCPMallocCached(uv, scaled_img_height / 2 * w_stride, 0);
 
@@ -266,7 +266,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
   int original_img_width = bgr_mat.cols;
   int original_img_height = bgr_mat.rows;
 
-  auto w_stride = ALIGN_16(scaled_img_width);
+  auto w_stride = BPU_ALIGN(scaled_img_width);
   cv::Mat pad_frame;
   if (static_cast<uint32_t>(original_img_width) != w_stride ||
       original_img_height != scaled_img_height) {
@@ -366,7 +366,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
   raw_img_width = bgr_mat.cols;
   raw_img_height = bgr_mat.rows;
 
-  auto w_stride = ALIGN_16(scaled_img_width);
+  auto w_stride = BPU_ALIGN(scaled_img_width);
   cv::Mat pad_frame;
   if (static_cast<uint32_t>(raw_img_width) != w_stride ||
       raw_img_height != scaled_img_height) {
@@ -412,7 +412,7 @@ std::shared_ptr<DNNTensor> ImageProc::GetNV12TensorFromNV12(const std::string &i
   auto *y = new hbUCPSysMem;
   auto *uv = new hbUCPSysMem;
 
-  auto w_stride = ALIGN_16(scaled_img_width);
+  auto w_stride = BPU_ALIGN(scaled_img_width);
   hbUCPMallocCached(y, scaled_img_height * w_stride, 0);
   hbUCPMallocCached(uv, scaled_img_height / 2 * w_stride, 0);
 
@@ -463,7 +463,7 @@ std::shared_ptr<DNNTensor> ImageProc::GetBGRTensorFromBGR(const std::string &ima
                                                       bool is_pad,
                                                       bool is_center_crop,
                                                       bool is_scale) {
-  auto w_stride = ALIGN_16(scaled_img_width);
+  auto w_stride = BPU_ALIGN(scaled_img_width);
   int channel = 3;
 
   cv::Mat bgr_mat = cv::imread(image_file, cv::IMREAD_COLOR);
@@ -581,7 +581,7 @@ std::shared_ptr<DNNTensor> ImageProc::GetBGRTensorFromBGRImg(
                                                     bool is_scale) {
   cv::Mat bgr_mat;
   bgr_mat_tmp.copyTo(bgr_mat);
-  auto w_stride = ALIGN_16(scaled_img_width);
+  auto w_stride = BPU_ALIGN(scaled_img_width);
   int channel = 3;
   int original_img_width = bgr_mat.cols;
   int original_img_height = bgr_mat.rows;
@@ -679,7 +679,7 @@ std::shared_ptr<DNNTensor> ImageProc::GetBGRTensorFromBGRImg(
     const int &scaled_img_height,
     const int &scaled_img_width,
     hbDNNTensorProperties &tensor_properties) {
-  auto w_stride = ALIGN_16(scaled_img_width);
+  auto w_stride = BPU_ALIGN(scaled_img_width);
 
   int src_elem_size = 1;
   switch (tensor_properties.tensorType)

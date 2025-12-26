@@ -24,7 +24,11 @@
 #include "rapidjson/istreamwrapper.h"
 #include "rapidjson/writer.h"
 #include "rclcpp/rclcpp.hpp"
+#ifdef CV_BRIDGE_CPP
+#include <cv_bridge/cv_bridge.hpp>
+#else
 #include <cv_bridge/cv_bridge.h>
+#endif
 #include <unistd.h>
 
 #include "dnn_node/dnn_node.h"
@@ -349,6 +353,11 @@ int DnnExampleNode::LoadConfig() {
       parser = DnnParserType::YOLOV5X_PARSER;
       ret = hobot::dnn_node::parser_yolov5x::LoadConfig(document);
 #endif
+#ifdef PLATFORM_S600
+    } else if ("yolov5x" == str_parser) {
+      parser = DnnParserType::YOLOV5X_PARSER;
+      ret = hobot::dnn_node::parser_yolov5x::LoadConfig(document);
+#endif
     } else if ("classification" == str_parser) {
       parser = DnnParserType::CLASSIFICATION_PARSER;
       ret = hobot::dnn_node::parser_mobilenetv2::LoadConfig(document);
@@ -496,6 +505,12 @@ int DnnExampleNode::PostProcess(
       break;
   #endif
   #ifdef PLATFORM_S100
+    case DnnParserType::YOLOV5X_PARSER:
+      parse_ret =
+          hobot::dnn_node::parser_yolov5x::Parse(node_output, det_result);
+      break;
+  #endif
+  #ifdef PLATFORM_S600
     case DnnParserType::YOLOV5X_PARSER:
       parse_ret =
           hobot::dnn_node::parser_yolov5x::Parse(node_output, det_result);

@@ -33,7 +33,20 @@ namespace dnn_node {
 #define ALIGN_4(w) ALIGNED_2E(w, 4U)
 #define ALIGN_8(w) ALIGNED_2E(w, 8U)
 #define ALIGN_16(w) ALIGNED_2E(w, 16U)
+#define ALIGN_32(w) ALIGNED_2E(w, 32U)
 #define ALIGN_64(w) ALIGNED_2E(w, 64U)
+
+#ifdef PLATFORM_X3
+#define BPU_ALIGN(value) ALIGN_16(value)
+#elif defined(PLATFORM_X5)
+#define BPU_ALIGN(value) ALIGN_32(value)
+#elif defined(PLATFORM_S100)
+#define BPU_ALIGN(value) ALIGN_32(value)
+#elif defined(PLATFORM_S600)
+#define BPU_ALIGN(value) ALIGN_64(value)
+#else
+#define BPU_ALIGN(value) ALIGN_32(value)
+#endif
 
 enum class ImageType { BGR = 0, RGB = 1};
 
