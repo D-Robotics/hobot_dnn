@@ -367,7 +367,7 @@ void PostProcessNHWC(std::shared_ptr<DNNTensor> tensor,
 #ifdef BPU_UCP
   int channel_aligned = tensor->properties.stride[2] / tensor->properties.stride[3];
 #else
-  int channel_aligned = num_pred * anchors.size()
+  int channel_aligned = num_pred * anchors.size();
 #endif
 
   for (int h = 0; h < height; h++) {
