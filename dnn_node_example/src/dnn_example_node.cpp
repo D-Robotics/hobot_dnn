@@ -42,6 +42,7 @@
 #include "dnn_node/util/output_parser/detection/ptq_yolov5x_output_parser.h"
 #include "dnn_node/util/output_parser/detection/ptq_yolo8_output_parser.h"
 #include "dnn_node/util/output_parser/detection/ptq_yolo10_output_parser.h"
+#include "dnn_node/util/output_parser/detection/ultralytics_yolo_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_yolo8_seg_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_stdc_output_parser.h"
@@ -312,6 +313,9 @@ int DnnExampleNode::LoadConfig() {
     } else if ("yolov10" == str_parser) {
       parser = DnnParserType::YOLOV10_PARSER;
       ret = hobot::dnn_node::parser_yolov10::LoadConfig(document);
+    } else if ("ultralytics_yolo" == str_parser) {
+      parser = DnnParserType::ULTRALYTICS_YOLO_PARSER;
+      ret = hobot::dnn_node::parser_ultralytics_yolo::LoadConfig(document);
     } else if ("yolov11" == str_parser){
       parser = DnnParserType::YOLOV8_PARSER;
       ret = hobot::dnn_node::parser_yolov8::LoadConfig(document);
@@ -376,7 +380,7 @@ int DnnExampleNode::LoadConfig() {
     } else {
       std::stringstream ss;
       ss << "Error! Invalid parser: " << str_parser
-         << " . Only yolov2, yolov3, yolov5, yolov5x, yolov8, yolov10, ssd, fcos"
+         << " . Only yolov2, yolov3, yolov5, yolov5x, yolov8, yolov10, ultralytics_yolo, ssd, fcos"
          << " efficient_det, classification, unet, yolov8-seg are supported";
       RCLCPP_ERROR(this->get_logger(), "%s", ss.str().c_str());
       return -3;
@@ -481,6 +485,10 @@ int DnnExampleNode::PostProcess(
     case DnnParserType::YOLOV10_PARSER:
       parse_ret =
           hobot::dnn_node::parser_yolov10::Parse(node_output, det_result);
+      break;
+    case DnnParserType::ULTRALYTICS_YOLO_PARSER:
+      parse_ret =
+          hobot::dnn_node::parser_ultralytics_yolo::Parse(node_output, det_result);
       break;
   #ifdef PLATFORM_X3
     case DnnParserType::YOLOV5_PARSER:
