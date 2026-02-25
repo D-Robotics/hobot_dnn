@@ -127,6 +127,7 @@ if(PLATFORM_X3)
     src/output_parser/detection/ptq_yolo2_output_parser.cpp
     src/output_parser/detection/ptq_yolo5_output_parser.cpp
     src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ultralytics_yolo_output_parser.cpp
     src/output_parser/detection/ptq_yolo10_output_parser.cpp
     src/output_parser/detection/fasterrcnn_output_parser.cpp
     src/output_parser/detection/ptq_efficientdet_output_parser.cpp
@@ -162,6 +163,7 @@ elseif(PLATFORM_Rdkultra)
     src/output_parser/detection/ptq_yolo2_output_parser.cpp
     src/output_parser/detection/ptq_yolov5x_output_parser.cpp
     src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ultralytics_yolo_output_parser.cpp
     src/output_parser/detection/ptq_yolo10_output_parser.cpp
     src/output_parser/detection/fasterrcnn_output_parser.cpp
     src/output_parser/detection/ptq_efficientdet_output_parser.cpp
@@ -196,6 +198,7 @@ elseif(PLATFORM_X5)
     src/output_parser/detection/ptq_yolo2_output_parser.cpp
     src/output_parser/detection/ptq_yolov5x_output_parser.cpp
     src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ultralytics_yolo_output_parser.cpp
     src/output_parser/detection/ptq_yolo10_output_parser.cpp
     src/output_parser/detection/fasterrcnn_output_parser.cpp
     # src/output_parser/detection/ptq_efficientdet_output_parser.cpp
@@ -230,6 +233,7 @@ elseif(PLATFORM_S100)
     src/output_parser/detection/ptq_yolo2_output_parser.cpp
     src/output_parser/detection/ptq_yolov5x_output_parser.cpp
     src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ultralytics_yolo_output_parser.cpp
     src/output_parser/detection/ptq_yolo10_output_parser.cpp
     # src/output_parser/detection/fasterrcnn_output_parser.cpp
     # src/output_parser/detection/ptq_efficientdet_output_parser.cpp
@@ -264,6 +268,7 @@ elseif(PLATFORM_S600)
     src/output_parser/detection/ptq_yolo2_output_parser.cpp
     src/output_parser/detection/ptq_yolov5x_output_parser.cpp
     src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ultralytics_yolo_output_parser.cpp
     src/output_parser/detection/ptq_yolo10_output_parser.cpp
     # src/output_parser/detection/fasterrcnn_output_parser.cpp
     # src/output_parser/detection/ptq_efficientdet_output_parser.cpp
@@ -297,6 +302,7 @@ elseif(PLATFORM_X86)
     src/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
     src/output_parser/detection/ptq_yolo2_output_parser.cpp
     src/output_parser/detection/ptq_yolo8_output_parser.cpp
+    src/output_parser/detection/ultralytics_yolo_output_parser.cpp
     src/output_parser/detection/ptq_yolo10_output_parser.cpp
     src/output_parser/detection/fasterrcnn_output_parser.cpp
     src/output_parser/detection/ptq_ssd_output_parser.cpp
