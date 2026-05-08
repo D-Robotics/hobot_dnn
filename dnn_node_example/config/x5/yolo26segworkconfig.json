@@ -1,0 +1,13 @@
+{
+	"model_file": "/opt/hobot/model/x5/basic/yolo26n_seg_bayese_640x640_nv12.bin",
+	"task_num": 4,
+	"dnn_Parser": "yolo26_seg",
+	"model_output_count": 10,
+	"num_mask": 32,
+	"class_num": 80,
+	"cls_names_list": "config/coco.list",
+ 	"strides": [8, 16, 32],
+	"score_threshold": 0.25,
+	"nms_threshold": 0.65,
+	"nms_top_k": 5000
+}
