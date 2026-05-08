@@ -1,5 +1,9 @@
 # Changelog for package dnn_node_example
 
+tros_2.6.2 (2026-05-08)
+------------------
+1. 新增 yolo26-seg 在 X5 S100 平台推理。
+
 tros_2.6.1 (2026-02-25)
 ------------------
 1. 新增 yolo26 在 X5 S100 平台推理。

@@ -45,6 +45,7 @@
 #include "dnn_node/util/output_parser/detection/ultralytics_yolo_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_yolo8_seg_output_parser.h"
+#include "dnn_node/util/output_parser/segmentation/ptq_yolo26_seg_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_stdc_output_parser.h"
 
 #include "include/image_utils.h"
@@ -377,11 +378,14 @@ int DnnExampleNode::LoadConfig() {
     } else if ("yolov8_seg" == str_parser) {
       parser = DnnParserType::YOLOV8_SEG_PARSER;
       ret = hobot::dnn_node::parser_yolov8_seg::LoadConfig(document);
+    } else if ("yolo26_seg" == str_parser) {
+      parser = DnnParserType::YOLO26_SEG_PARSER;
+      ret = hobot::dnn_node::parser_yolo26_seg::LoadConfig(document);
     } else {
       std::stringstream ss;
       ss << "Error! Invalid parser: " << str_parser
          << " . Only yolov2, yolov3, yolov5, yolov5x, yolov8, yolov10, ultralytics_yolo, ssd, fcos"
-         << " efficient_det, classification, unet, yolov8-seg are supported";
+         << " efficient_det, classification, unet, yolov8-seg, yolo26-seg are supported";
       RCLCPP_ERROR(this->get_logger(), "%s", ss.str().c_str());
       return -3;
     }
@@ -543,9 +547,17 @@ int DnnExampleNode::PostProcess(
                                                       det_result);
       break;
     case DnnParserType::YOLOV8_SEG_PARSER:
-      parse_ret = hobot::dnn_node::parser_yolov8_seg::Parse(node_output, 
-                                                            parser_output->resized_h, 
-                                                            parser_output->resized_w, 
+      parse_ret = hobot::dnn_node::parser_yolov8_seg::Parse(node_output,
+                                                            parser_output->resized_h,
+                                                            parser_output->resized_w,
+                                                            parser_output->model_h,
+                                                            parser_output->model_w,
+                                                            det_result);
+      break;
+    case DnnParserType::YOLO26_SEG_PARSER:
+      parse_ret = hobot::dnn_node::parser_yolo26_seg::Parse(node_output,
+                                                            parser_output->resized_h,
+                                                            parser_output->resized_w,
                                                             parser_output->model_h,
                                                             parser_output->model_w,
                                                             det_result);

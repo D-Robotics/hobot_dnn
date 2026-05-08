@@ -65,6 +65,7 @@ enum class DnnParserType {
   FCOS_PARSER,
   UNET_PARSER,
   YOLOV8_SEG_PARSER,          // 对应dnn_node中yolov8_seg的output_parser算法
+  YOLO26_SEG_PARSER,         // 对应dnn_node中yolo26_seg的output_parser算法
   STDC_PARSER,
   ULTRALYTICS_YOLO_PARSER
   /*define more*/
