@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_2.6.3 (2026-05-20)
+------------------
+1. 新增 yoloe26seg 解析方法, 支持 yoloe26seg 模型推理。
+
 tros_2.6.2 (2026-05-08)
 ------------------
 1. 新增 yolo26seg 解析方法, 支持 yolo26seg 模型推理。
