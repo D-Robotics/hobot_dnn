@@ -98,7 +98,7 @@ def generate_launch_description():
                 'publish_image_source': LaunchConfiguration('publish_image_source'),
                 'publish_message_topic_name': '/hbmem_img',
                 'publish_image_format': 'jpg',
-                'publish_fps': '5'
+                'publish_fps': '150'
             }.items()
         )
 

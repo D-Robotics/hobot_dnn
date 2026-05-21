@@ -16,6 +16,7 @@
 #define DNN_NODE_IMPL_H_
 
 #include <memory>
+#include <queue>
 #include <unordered_map>
 #include <vector>
 
@@ -88,6 +89,15 @@ struct ThreadPool {
   int msg_limit_count_ = 5;
 };
 
+// A queued inference request for the async completion thread
+struct InferCompletion {
+  TaskId task_id;
+  std::shared_ptr<DnnNodeOutput> dnn_output;
+  std::shared_ptr<Task> infer_task;
+  int infer_timeout_ms;
+  PostProcessCbType post_process;
+};
+
 class DnnNodeImpl {
  public:
   explicit DnnNodeImpl(std::shared_ptr<DnnNodePara> &dnn_node_para_ptr);
@@ -136,7 +146,11 @@ class DnnNodeImpl {
               PostProcessCbType post_process,
               const std::shared_ptr<std::vector<hbDNNRoi>> rois,
               const int alloctask_timeout_ms,
-              const int infer_timeout_ms);
+              const int infer_timeout_ms,
+              const bool is_sync_mode);
+
+  // 异步推理完成线程的主循环
+  void CompletionLoop();
 
   // 配置预测任务的输入数据
   // - 参数
@@ -196,6 +210,13 @@ class DnnNodeImpl {
   // 例如dnn node推理默认使用负载均衡模式（交替指定两个BPU核），
   // 而对于多核模型，推理任务会同时使用两个BPU核，因此如果指定了BPU核将会推理失败。
   bool en_set_task_para_ = true;
+
+  // 异步推理完成线程
+  std::queue<InferCompletion> completion_queue_;
+  std::mutex completion_mtx_;
+  std::condition_variable completion_cv_;
+  std::shared_ptr<std::thread> completion_thread_;
+  bool completion_stop_ = false;
 
   std::mutex load_lock_;
   int32_t core_id_ = HB_UCP_BPU_CORE_0;

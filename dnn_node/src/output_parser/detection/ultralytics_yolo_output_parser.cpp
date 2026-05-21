@@ -13,24 +13,23 @@
 // limitations under the License.
 #include "dnn_node/util/output_parser/detection/ultralytics_yolo_output_parser.h"
 
-#include <arm_neon.h>
-
-#include <iostream>
-#include <queue>
+#include <cstring>
 #include <fstream>
 #include <future>
+#include <iostream>
+#include <queue>
+#include <thread>
 
 #include "rapidjson/document.h"
 #include "rclcpp/rclcpp.hpp"
 
 #include "dnn_node/util/output_parser/detection/nms.h"
+#include "dnn_node/util/output_parser/neon_utils.h"
 #include "dnn_node/util/output_parser/utils.h"
-
 
 namespace hobot {
 namespace dnn_node {
 namespace parser_ultralytics_yolo {
-
 
 inline float fastExp(float x) {
   union {
@@ -39,19 +38,6 @@ inline float fastExp(float x) {
   } v;
   v.i = (12102203.1616540672f * x + 1064807160.56887296f);
   return v.f;
-}
-
-
-/**
- * Finds the greatest element in the range [first, last)
- * @tparam[in] ForwardIterator: iterator type
- * @param[in] first: fist iterator
- * @param[in] last: last iterator
- * @return Iterator to the greatest element in the range [first, last)
- */
-template <class ForwardIterator>
-inline size_t argmax(ForwardIterator first, ForwardIterator last) {
-  return std::distance(first, std::max_element(first, last));
 }
 
 /**
@@ -78,9 +64,7 @@ struct UltralyticsYoloConfig {
 };
 
 UltralyticsYoloConfig default_yolo_config = {
-    {8, 16, 32},
-    80,
-    16,
+    {8, 16, 32}, 80, 16,
     {"person",        "bicycle",      "car",
      "motorcycle",    "airplane",     "bus",
      "train",         "truck",        "boat",
@@ -163,7 +147,6 @@ int InitRegMax(const int &reg_max) {
   return 0;
 }
 
-
 int InitStrides(const std::vector<int> &strides, const int &model_output_count){
   int size = strides.size();
   if(size * 2 != model_output_count){
@@ -194,7 +177,7 @@ int LoadConfig(const rapidjson::Document &document) {
     if (InitClassNum(class_num) < 0) {
       return -1;
     }
-  } 
+  }
   if (document.HasMember("cls_names_list")) {
     std::string cls_name_file = document["cls_names_list"].GetString();
     if (InitClassNames(cls_name_file) < 0) {
@@ -206,7 +189,7 @@ int LoadConfig(const rapidjson::Document &document) {
     if (InitRegMax(reg_max) < 0) {
       return -1;
     }
-  } 
+  }
   if (document.HasMember("strides")) {
     std::vector<int> strides;
     for(size_t i = 0; i < document["strides"].Size(); i++){
@@ -267,14 +250,29 @@ void ParseTensor(std::shared_ptr<DNNTensor> clses,
   int height, width;
   auto ret = hobot::dnn_node::output_parser::get_tensor_hw(boxes, &height, &width);
   if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("ultralytics_yolo_parser"), "get_tensor_hw failed");
+    RCLCPP_ERROR(rclcpp::get_logger("ultralytics_yolo_parser"),
+                 "get_tensor_hw failed");
     return;
   }
 
   float *cls_data = clses->GetTensorData<float>();
   float *box_data = boxes->GetTensorData<float>();
 
+  // Pre-compute grid center coordinates
+  std::vector<float> col_center(width);
+  std::vector<float> row_center(height);
+  for (int w = 0; w < width; ++w) {
+    col_center[w] = (static_cast<float>(w) + 0.5f) * stride;
+  }
   for (int h = 0; h < height; ++h) {
+    row_center[h] = (static_cast<float>(h) + 0.5f) * stride;
+  }
+
+  int det_count = 0;
+  dets.reserve(dets.size() + height * width / 20);
+
+  for (int h = 0; h < height; ++h) {
+    float gc_y = row_center[h];
     for (int w = 0; w < width; ++w) {
       float *cur_cls_data = cls_data;
       float *cur_box_data = box_data;
@@ -282,48 +280,55 @@ void ParseTensor(std::shared_ptr<DNNTensor> clses,
       cls_data += num_classes;
       box_data += reg_max * 4;
 
-      int id = argmax(cur_cls_data, cur_cls_data + num_classes);
-      if (cur_cls_data[id] < score_threshold_) {
+      // Inline argmax: faster than std::max_element + std::distance on ARM
+      float max_logit = cur_cls_data[0];
+      int id = 0;
+      for (int c = 1; c < num_classes; ++c) {
+        if (cur_cls_data[c] > max_logit) {
+          max_logit = cur_cls_data[c];
+          id = c;
+        }
+      }
+
+      if (max_logit < score_threshold_) {
         continue;
       }
-      
-      double confidence = 1 / (1 + std::exp(-cur_cls_data[id]));
-      float sum, distribute_score;
-      size_t box_id = 0;
-      std::vector<float> decoded_boxes(4, 0);
+
+      float confidence = 1.0f / (1.0f + std::exp(-max_logit));
+
+      // Stack-based decoded boxes (avoid heap allocation per cell)
+      float decoded_boxes[4];
       if (reg_max == 1) {
-        for (size_t i = 0; i < 4; ++i) {
-          decoded_boxes[i] = cur_box_data[i];
-        }
+        std::memcpy(decoded_boxes, cur_box_data, 4 * sizeof(float));
       } else {
+        decoded_boxes[0] = decoded_boxes[1] =
+            decoded_boxes[2] = decoded_boxes[3] = 0.0f;
+        size_t box_id = 0;
         for (size_t i = 0; i < 4; ++i) {
-          sum = 0.;
+          float sum = 0.0f;
           for (int reg = 0; reg < reg_max; ++reg) {
+            float distribute_score;
             if (is_performance_) {
               distribute_score = fastExp(cur_box_data[box_id]);
             } else {
               distribute_score = std::exp(cur_box_data[box_id]);
             }
             sum += distribute_score;
-            decoded_boxes[i] += distribute_score * reg;
+            decoded_boxes[i] += distribute_score * static_cast<float>(reg);
             ++box_id;
           }
           decoded_boxes[i] /= sum;
         }
       }
 
-      float xmin = (w + 0.5 - decoded_boxes[0]) * stride;
-      float ymin = (h + 0.5 - decoded_boxes[1]) * stride;
-      float xmax = (w + 0.5 + decoded_boxes[2]) * stride;
-      float ymax = (h + 0.5 + decoded_boxes[3]) * stride;
+      float gc_x = col_center[w];
+      float xmin = gc_x - decoded_boxes[0] * stride;
+      float ymin = gc_y - decoded_boxes[1] * stride;
+      float xmax = gc_x + decoded_boxes[2] * stride;
+      float ymax = gc_y + decoded_boxes[3] * stride;
 
-      if (xmax <= 0 || ymax <= 0) {
-        continue;
-      }
-
-      if (xmin > xmax || ymin > ymax) {
-        continue;
-      }
+      if (xmax <= 0 || ymax <= 0) continue;
+      if (xmin > xmax || ymin > ymax) continue;
 
       Bbox bbox(xmin, ymin, xmax, ymax);
       dets.emplace_back(
@@ -331,19 +336,21 @@ void ParseTensor(std::shared_ptr<DNNTensor> clses,
           confidence,
           bbox,
           yolo_config_.class_names[static_cast<int>(id)].c_str());
-      
+      det_count++;
     }
   }
+  RCLCPP_DEBUG(rclcpp::get_logger("ultralytics_yolo_parser"),
+              "ParseTensor layer=%d detections=%d", layer, det_count);
 }
 
 int32_t Parse(
-    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output, 
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
     std::shared_ptr<DnnParserResult> &result) {
   if (!result) {
     result = std::make_shared<DnnParserResult>();
   }
-  SortByOrder(node_output->output_tensors,yolo_config_.output_order);
-  int ret = PostProcess(node_output->output_tensors, 
+  SortByOrder(node_output->output_tensors, yolo_config_.output_order);
+  int ret = PostProcess(node_output->output_tensors,
                         result->perception);
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("ultralytics_yolo_parser"),
@@ -359,7 +366,6 @@ int32_t Parse(
   return ret;
 }
 
-
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                 Perception &perception) {
   perception.type = Perception::DET;
@@ -372,19 +378,9 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
     auto fut = std::async(std::launch::async, [&output_tensors, i](){
       std::shared_ptr<std::vector<Detection>> sp_det = nullptr;
       std::vector<Detection> _dets;
-      auto start = std::chrono::steady_clock::now();
-      ParseTensor(output_tensors[i * 2], 
-                  output_tensors[i * 2 + 1], 
+      ParseTensor(output_tensors[i * 2],
+                  output_tensors[i * 2 + 1],
                   static_cast<int>(i), _dets);
-      int time_ms =
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now() - start)
-              .count();
-      RCLCPP_DEBUG_STREAM(rclcpp::get_logger("ultralytics_yolo_parser"),
-                      "parse tensor "
-                      << i
-                      << " cost [" << time_ms << "]"
-                      );
       if (!_dets.empty()) {
         sp_det = std::make_shared<std::vector<Detection>>(_dets);
       }
@@ -405,33 +401,32 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                   std::make_move_iterator(det->end()));
     }
   }
-  int parse_tensor_time_ms =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
+  int parse_tensor_time_us =
+      std::chrono::duration_cast<std::chrono::microseconds>(
           std::chrono::steady_clock::now() - ts_start)
           .count();
   ts_start = std::chrono::steady_clock::now();
 
   nms(dets, nms_threshold_, nms_top_k_, perception.det, false);
-  
-  int nms_time_ms =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
+
+  int nms_time_us =
+      std::chrono::duration_cast<std::chrono::microseconds>(
           std::chrono::steady_clock::now() - ts_start)
           .count();
 
-  RCLCPP_DEBUG_STREAM(rclcpp::get_logger("ultralytics_yolo_parser"),
-                   "output_tensors size: "
-                   << output_tensors.size()
-                   << ", parse_tensor_time_ms [" << parse_tensor_time_ms
-                   << "] nms_time_ms [" << nms_time_ms << "]"
-                   );
+  RCLCPP_INFO(rclcpp::get_logger("ultralytics_yolo_parser"),
+              "PostProcess timing: output_tensors=%zu dets=%zu "
+              "parse=%dus nms=%dus",
+              output_tensors.size(), dets.size(),
+              parse_tensor_time_us, nms_time_us);
 
   return 0;
 }
 
-
-void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &outputs,std::vector<int> order){
-  std::vector<std::shared_ptr<DNNTensor>>  outputs_sorted(outputs.size());
-  for(int i = 0; i < outputs.size(); i++){
+void SortByOrder(std::vector<std::shared_ptr<DNNTensor>> &outputs,
+                 std::vector<int> order){
+  std::vector<std::shared_ptr<DNNTensor>> outputs_sorted(outputs.size());
+  for(size_t i = 0; i < outputs.size(); i++){
     outputs_sorted[i] = outputs[order[i]];
   }
   outputs = outputs_sorted;

@@ -17,6 +17,7 @@
 #include <memory>
 #include <queue>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -60,6 +61,13 @@ DnnNodeImpl::DnnNodeImpl(std::shared_ptr<DnnNodePara> &dnn_node_para_ptr) {
 }
 
 DnnNodeImpl::~DnnNodeImpl() {
+  // 停止异步推理完成线程
+  if (completion_thread_ && completion_thread_->joinable()) {
+    completion_stop_ = true;
+    completion_cv_.notify_one();
+    completion_thread_->join();
+  }
+
   if (!dnn_rt_para_) {
     std::unique_lock<std::mutex> lk(load_lock_);
     dnn_rt_para_->models_load.clear();
@@ -259,10 +267,15 @@ int DnnNodeImpl::TaskInit() {
   }
 
   thread_pool_->msg_handle_.CreatThread(dnn_node_para_ptr_->task_num);
-  thread_pool_->msg_limit_count_ = dnn_node_para_ptr_->task_num;
+  thread_pool_->msg_limit_count_ = dnn_node_para_ptr_->task_num * 4;
   RCLCPP_INFO(rclcpp::get_logger("dnn"),
               "Set task_num [%d]",
               dnn_node_para_ptr_->task_num);
+
+  // 启动异步推理完成线程
+  completion_stop_ = false;
+  completion_thread_ = std::make_shared<std::thread>(
+      &DnnNodeImpl::CompletionLoop, this);
 
   return 0;
 }
@@ -643,6 +656,151 @@ int DnnNodeImpl::GetModelInputSize(int32_t input_index, int &w, int &h) {
   return 0;
 }
 
+void DnnNodeImpl::CompletionLoop() {
+  auto last_release_tp = std::chrono::steady_clock::now();
+  int frame_count = 0;
+  auto report_tp = std::chrono::steady_clock::now();
+  int report_frames = 0;
+
+  while (!completion_stop_ && rclcpp::ok()) {
+    auto dequeue_start = std::chrono::steady_clock::now();
+    InferCompletion req;
+    {
+      std::unique_lock<std::mutex> lk(completion_mtx_);
+      completion_cv_.wait(lk, [this]() {
+        return !completion_queue_.empty() || completion_stop_ || !rclcpp::ok();
+      });
+      if (completion_stop_ || !rclcpp::ok()) {
+        break;
+      }
+      if (completion_queue_.empty()) {
+        continue;
+      }
+      req = std::move(completion_queue_.front());
+      completion_queue_.pop();
+    }
+    auto dequeue_end = std::chrono::steady_clock::now();
+
+    // 执行模型推理：仅 RunInfer + WaitInferDone，不在此线程做 GetOutputTensors
+    int ret = 0;
+    auto run_infer_start = std::chrono::steady_clock::now();
+    {
+      auto &task = req.infer_task;
+      struct timespec timespec_now = {0, 0};
+      clock_gettime(CLOCK_REALTIME, &timespec_now);
+
+      ret = task->RunInfer();
+      auto run_infer_end = std::chrono::steady_clock::now();
+      if (ret != 0) {
+        RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Failed to run infer task, ret[%d]", ret);
+        if (HB_DNN_INVALID_ARGUMENT == ret) {
+          hbUCPSchedParam ctrl_param;
+          HB_UCP_INITIALIZE_SCHED_PARAM(&ctrl_param);
+          task->SetCtrlParam(ctrl_param);
+          ret = task->RunInfer();
+          if (ret == 0) en_set_task_para_ = false;
+        }
+      }
+      if (ret == 0) {
+        auto tp_now = std::chrono::system_clock::now();
+        ret = task->WaitInferDone(req.infer_timeout_ms);
+        auto wait_done_end = std::chrono::steady_clock::now();
+        if (ret != 0) {
+          RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Failed to wait infer done, ret[%d]", ret);
+        }
+        if (req.dnn_output->rt_stat) {
+          req.dnn_output->rt_stat->infer_time_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now() - tp_now).count();
+          req.dnn_output->rt_stat->infer_timespec_start = timespec_now;
+          clock_gettime(CLOCK_REALTIME, &timespec_now);
+          req.dnn_output->rt_stat->infer_timespec_end = timespec_now;
+        }
+        req.dnn_output->rt_stat->fps_updated = output_stat_.Update();
+        req.dnn_output->rt_stat->output_fps = output_stat_.Get();
+
+        // 暂存 RunInfer 和 WaitInferDone 耗时用于日志
+        auto run_infer_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                                run_infer_end - run_infer_start).count();
+        auto wait_infer_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                                 wait_done_end - run_infer_end).count();
+        // 每 100 帧输出 RunInfer/WaitInferDone 分离计时
+        static int log_count = 0;
+        static auto log_tp = std::chrono::steady_clock::now();
+        log_count++;
+        if (log_count % 100 == 0) {
+          auto period_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                               wait_done_end - log_tp).count();
+          RCLCPP_INFO(rclcpp::get_logger("dnn"),
+                      "InferSplit#%d: run_infer=%ldus wait_infer=%ldus period=%ldus",
+                      log_count, run_infer_us, wait_infer_us, period_us);
+          log_tp = wait_done_end;
+        }
+      }
+    }
+    auto infer_end = std::chrono::steady_clock::now();
+
+    // 推理任务资源释放（尽早释放以允许下一帧 setup）
+    auto release_start = std::chrono::steady_clock::now();
+    ReleaseTask(req.task_id);
+    auto release_end = std::chrono::steady_clock::now();
+
+    // 后处理异步执行：包含 GetOutputTensors（~1.2ms 张量拷贝）+ 解析
+    // 这样 completion 线程能立即开始下一帧推理，重叠张量拷贝与 BPU 计算
+    if (req.post_process && ret == 0) {
+      auto post_fn = req.post_process;
+      auto output = req.dnn_output;
+      auto infer_task = req.infer_task;
+      auto model_task_type = dnn_node_para_ptr_->model_task_type;
+      std::thread([post_fn, output, infer_task, model_task_type]() mutable {
+        // 在 post 线程中拷贝输出张量，释放 BPU 推理线程
+        if (ModelTaskType::ModelInferType == model_task_type) {
+          auto model_task = std::dynamic_pointer_cast<ModelInferTask>(infer_task);
+          if (model_task) model_task->GetOutputTensors(output->output_tensors);
+        } else if (ModelTaskType::ModelRoiInferType == model_task_type) {
+          auto model_task = std::dynamic_pointer_cast<ModelRoiInferTask>(infer_task);
+          if (model_task) model_task->GetOutputTensors(output->output_tensors);
+        }
+        post_fn(output);
+      }).detach();
+    } else if (req.post_process) {
+      auto post_fn = req.post_process;
+      auto output = req.dnn_output;
+      std::thread([post_fn, output]() mutable {
+        post_fn(output);
+      }).detach();
+    }
+
+    // 每 100 帧输出一次详细计时
+    frame_count++;
+    if (frame_count % 100 == 0) {
+      auto now = std::chrono::steady_clock::now();
+      auto wait_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                         dequeue_end - last_release_tp).count();
+      auto dequeue_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                            dequeue_end - dequeue_start).count();
+      auto infer_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                          infer_end - run_infer_start).count();
+      auto release_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                            release_end - release_start).count();
+      auto period_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                           now - report_tp).count();
+      auto period_frames = frame_count - report_frames;
+      auto avg_fps = period_frames * 1000000.0f / period_us;
+
+      RCLCPP_INFO(rclcpp::get_logger("dnn"),
+                  "CompletionLoop#%d: wait=%ldus deq=%ldus infer=%ldus "
+                  "release=%ldus avg_fps=%.1f",
+                  frame_count, wait_us, dequeue_us, infer_us, release_us,
+                  avg_fps);
+
+      report_tp = now;
+      report_frames = frame_count;
+    }
+    last_release_tp = release_end;
+  }
+}
+
 int DnnNodeImpl::Run(
     std::vector<std::shared_ptr<DNNInput>> &inputs,
     std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
@@ -663,9 +821,11 @@ int DnnNodeImpl::Run(
                    post_process,
                    rois,
                    alloctask_timeout_ms,
-                   infer_timeout_ms);
+                   infer_timeout_ms,
+                   is_sync_mode);
   } else {
-    std::lock_guard<std::mutex> lock(thread_pool_->msg_mutex_);
+    // 异步模式：直接投递到线程池，由 AllocTask 提供背压
+    // msg_limit_count_ 设为 task_num * 4 以适应异步流水线
     if (thread_pool_->msg_handle_.GetTaskNum() >
         thread_pool_->msg_limit_count_) {
       RCLCPP_INFO(rclcpp::get_logger("dnn"),
@@ -693,7 +853,8 @@ int DnnNodeImpl::Run(
               post_process,
               rois,
               alloctask_timeout_ms,
-              infer_timeout_ms);
+              infer_timeout_ms,
+              false);
     };
 
     thread_pool_->msg_handle_.PostTask(infer_task);
@@ -710,8 +871,9 @@ int DnnNodeImpl::RunImpl(
     PostProcessCbType post_process,
     const std::shared_ptr<std::vector<hbDNNRoi>> rois,
     const int alloctask_timeout_ms,
-    const int infer_timeout_ms) {
-  
+    const int infer_timeout_ms,
+    const bool is_sync_mode) {
+
   // 检查参数是否正确
   if (!dnn_rt_para_) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid Para In Run, ret[%d]", HB_DNN_INVALID_ARGUMENT);
@@ -735,8 +897,7 @@ int DnnNodeImpl::RunImpl(
   dnn_output->rt_stat->input_fps = input_stat_.Get();
   dnn_output->rois = rois;
 
-  // 对于roi
-  // infer，如果当前帧中无roi，不需要推理，更新统计信息后直接执行用户定义的后处理
+  // 对于roi infer，如果当前帧中无roi，不需要推理，更新统计信息后直接执行用户定义的后处理
   if (dnn_node_para_ptr_ &&
       ModelTaskType::ModelRoiInferType == dnn_node_para_ptr_->model_task_type &&
       (!rois || rois->empty())) {
@@ -768,6 +929,7 @@ int DnnNodeImpl::RunImpl(
   // 并通过推理任务的task_id指定推理任务
   if (PreProcess(inputs, tensor_inputs, input_type, task_id, rois) != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run PreProcess failed!");
+    ReleaseTask(task_id);
     return -1;
   }
 
@@ -775,26 +937,36 @@ int DnnNodeImpl::RunImpl(
   int ret = 0;
   ret = RunProcessInput(task_id, input_type);
   if (ret != 0) {
+    ReleaseTask(task_id);
     return ret;
   }
 
-  // 4 执行模型推理
-  ret = RunInferTask(dnn_output, GetTask(task_id), infer_timeout_ms);
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
-  } else {
-    // 统计输出fps
-    dnn_output->rt_stat->fps_updated = output_stat_.Update();
-    dnn_output->rt_stat->output_fps = output_stat_.Get();
-  }
+  if (is_sync_mode) {
+    // 4 执行模型推理（同步模式：阻塞当前线程）
+    ret = RunInferTask(dnn_output, GetTask(task_id), infer_timeout_ms);
+    if (ret != 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
+    } else {
+      // 统计输出fps
+      dnn_output->rt_stat->fps_updated = output_stat_.Update();
+      dnn_output->rt_stat->output_fps = output_stat_.Get();
+    }
 
-  // 5 推理任务资源释放
-  ReleaseTask(task_id);
-  
-  // 6 执行模型后处理
-  // 即使推理失败，也要将对应的（空）结果输出，保证每个推理输入都有输出。
-  if (post_process) {
-    post_process(dnn_output);
+    // 5 推理任务资源释放
+    ReleaseTask(task_id);
+
+    // 6 执行模型后处理
+    if (post_process) {
+      post_process(dnn_output);
+    }
+  } else {
+    // 异步模式：将推理+释放+后处理加入完成队列，立即返回
+    {
+      std::lock_guard<std::mutex> lk(completion_mtx_);
+      completion_queue_.emplace(InferCompletion{
+          task_id, dnn_output, infer_task, infer_timeout_ms, post_process});
+    }
+    completion_cv_.notify_one();
   }
 
   return 0;
