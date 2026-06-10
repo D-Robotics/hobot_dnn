@@ -283,6 +283,102 @@ float DequantiScale(int32_t data,
                     float &scale_value);
 
 
+// void ParseTensor(std::shared_ptr<DNNTensor> clses,
+//                  std::shared_ptr<DNNTensor> boxes,
+//                  std::shared_ptr<DNNTensor> masks,
+//                  int layer,
+//                  std::vector<YOLOSeg> &dets) {
+//   clses->CACHE_INVALIDATE();
+//   boxes->CACHE_INVALIDATE();
+//   masks->CACHE_INVALIDATE();
+//   int num_classes = yolo8_seg_config_.class_num;
+//   int reg_max = yolo8_seg_config_.reg_max;
+//   int stride = yolo8_seg_config_.strides[layer];
+//   int num_mask = yolo8_seg_config_.num_mask;
+
+//   std::vector<float> class_pred(yolo8_seg_config_.class_num, 0.0);
+//   int height, width;
+//   auto ret =
+//       hobot::dnn_node::output_parser::get_tensor_hw(boxes, &height, &width);
+//   if (ret != 0) {
+//     RCLCPP_ERROR(rclcpp::get_logger("yolo8_seg_parser"),
+//                  "get_tensor_hw failed");
+//   }
+
+//   float *cls_data = clses->GetTensorData<float>();
+//   int32_t *box_data = boxes->GetTensorData<int32_t>();
+//   auto *box_scale_data = reinterpret_cast<float *>(boxes->properties.scale.scaleData);
+//   int32_t *mask_data = masks->GetTensorData<int32_t>();
+//   float *mask_scale_data = reinterpret_cast<float *>(masks->properties.scale.scaleData);
+
+//   for (int h = 0; h < height; ++h) {
+//     for (int w = 0; w < width; ++w) {
+//       float *cur_cls_data = cls_data;
+//       int32_t *cur_box_data = box_data;
+//       int32_t *cur_mask_data = mask_data;
+
+//       cls_data += num_classes;
+//       box_data += reg_max * 4;
+//       mask_data += num_mask;
+
+//       int id = argmax(cur_cls_data, cur_cls_data + num_classes);
+//       float max_score = cur_cls_data[id];
+
+//       if (max_score < score_threshold_) {
+//         continue;
+//       }
+
+//       double confidence = 1 / (1 + std::exp(-max_score));
+//       float sum, distribute_score;
+//       size_t box_id = 0;
+//       std::vector<float> decoded_boxes(4, 0.);
+//       for (size_t i = 0; i < 4; ++i) {
+//         sum = 0;
+//         for (int reg = 0; reg < reg_max; ++reg) {
+//           if (is_performance_) {
+//             distribute_score = fastExp(DequantiScale(cur_box_data[box_id], false, box_scale_data[box_id]));
+//           } else {
+//             distribute_score = std::exp(DequantiScale(cur_box_data[box_id], false, box_scale_data[box_id]));
+//           }
+//           sum += distribute_score;
+//           decoded_boxes[i] += distribute_score * reg;
+//           ++box_id;
+//         }
+//         decoded_boxes[i] /= sum;
+//       }
+
+//       float xmin = (w + 0.5 - decoded_boxes[0]) * stride;
+//       float ymin = (h + 0.5 - decoded_boxes[1]) * stride;
+//       float xmax = (w + 0.5 + decoded_boxes[2]) * stride;
+//       float ymax = (h + 0.5 + decoded_boxes[3]) * stride;
+
+//       if (xmax <= 0 || ymax <= 0) {
+//         continue;
+//       }
+
+//       if (xmin > xmax || ymin > ymax) {
+//         continue;
+//       }
+
+//       Bbox bbox(xmin, ymin, xmax, ymax);
+
+//       std::vector<float> mask(num_mask, 0);
+//       for (size_t i = 0; i < static_cast<size_t>(num_mask); ++i) {
+//         mask[i] = DequantiScale(cur_mask_data[i], false, mask_scale_data[i]);
+//       }
+//       dets.emplace_back(
+//           static_cast<int>(id),
+//           confidence,
+//           bbox,
+//           yolo8_seg_config_.class_names[static_cast<int>(id)].c_str(),
+//           std::move(mask)
+//           );
+      
+//     }
+//   }
+// }
+
+
 void ParseTensor(std::shared_ptr<DNNTensor> clses,
                  std::shared_ptr<DNNTensor> boxes,
                  std::shared_ptr<DNNTensor> masks,
@@ -291,34 +387,31 @@ void ParseTensor(std::shared_ptr<DNNTensor> clses,
   clses->CACHE_INVALIDATE();
   boxes->CACHE_INVALIDATE();
   masks->CACHE_INVALIDATE();
+
   int num_classes = yolo8_seg_config_.class_num;
   int reg_max = yolo8_seg_config_.reg_max;
   int stride = yolo8_seg_config_.strides[layer];
   int num_mask = yolo8_seg_config_.num_mask;
 
-  std::vector<float> class_pred(yolo8_seg_config_.class_num, 0.0);
   int height, width;
-  auto ret =
-      hobot::dnn_node::output_parser::get_tensor_hw(boxes, &height, &width);
+  auto ret = hobot::dnn_node::output_parser::get_tensor_hw(boxes, &height, &width);
   if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("yolo8_seg_parser"),
-                 "get_tensor_hw failed");
+    RCLCPP_ERROR(rclcpp::get_logger("yolo8_seg_parser"), "get_tensor_hw failed");
+    return;
   }
 
   float *cls_data = clses->GetTensorData<float>();
-  int32_t *box_data = boxes->GetTensorData<int32_t>();
-  auto *box_scale_data = reinterpret_cast<float *>(boxes->properties.scale.scaleData);
-  int32_t *mask_data = masks->GetTensorData<int32_t>();
-  float *mask_scale_data = reinterpret_cast<float *>(masks->properties.scale.scaleData);
+  float *box_data = boxes->GetTensorData<float>();
+  float *mask_data = masks->GetTensorData<float>();
 
   for (int h = 0; h < height; ++h) {
     for (int w = 0; w < width; ++w) {
       float *cur_cls_data = cls_data;
-      int32_t *cur_box_data = box_data;
-      int32_t *cur_mask_data = mask_data;
+      float *cur_box_data = box_data;
+      float *cur_mask_data = mask_data;
 
       cls_data += num_classes;
-      box_data += reg_max * 4;
+      box_data += reg_max * 4;   
       mask_data += num_mask;
 
       int id = argmax(cur_cls_data, cur_cls_data + num_classes);
@@ -328,17 +421,19 @@ void ParseTensor(std::shared_ptr<DNNTensor> clses,
         continue;
       }
 
-      double confidence = 1 / (1 + std::exp(-max_score));
-      float sum, distribute_score;
+      double confidence = 1.0 / (1.0 + std::exp(-max_score));
+
+      // 解码边界框（直接使用 float 值）
       size_t box_id = 0;
-      std::vector<float> decoded_boxes(4, 0.);
+      std::vector<float> decoded_boxes(4, 0.0f);
       for (size_t i = 0; i < 4; ++i) {
-        sum = 0;
+        float sum = 0.0f;
         for (int reg = 0; reg < reg_max; ++reg) {
+          float distribute_score;
           if (is_performance_) {
-            distribute_score = fastExp(DequantiScale(cur_box_data[box_id], false, box_scale_data[box_id]));
+            distribute_score = fastExp(cur_box_data[box_id]);  
           } else {
-            distribute_score = std::exp(DequantiScale(cur_box_data[box_id], false, box_scale_data[box_id]));
+            distribute_score = std::exp(cur_box_data[box_id]);
           }
           sum += distribute_score;
           decoded_boxes[i] += distribute_score * reg;
@@ -347,33 +442,25 @@ void ParseTensor(std::shared_ptr<DNNTensor> clses,
         decoded_boxes[i] /= sum;
       }
 
-      float xmin = (w + 0.5 - decoded_boxes[0]) * stride;
-      float ymin = (h + 0.5 - decoded_boxes[1]) * stride;
-      float xmax = (w + 0.5 + decoded_boxes[2]) * stride;
-      float ymax = (h + 0.5 + decoded_boxes[3]) * stride;
+      float xmin = (w + 0.5f - decoded_boxes[0]) * stride;
+      float ymin = (h + 0.5f - decoded_boxes[1]) * stride;
+      float xmax = (w + 0.5f + decoded_boxes[2]) * stride;
+      float ymax = (h + 0.5f + decoded_boxes[3]) * stride;
 
-      if (xmax <= 0 || ymax <= 0) {
-        continue;
-      }
-
-      if (xmin > xmax || ymin > ymax) {
-        continue;
-      }
+      if (xmax <= 0.0f || ymax <= 0.0f) continue;
+      if (xmin > xmax || ymin > ymax) continue;
 
       Bbox bbox(xmin, ymin, xmax, ymax);
 
-      std::vector<float> mask(num_mask, 0);
-      for (size_t i = 0; i < static_cast<size_t>(num_mask); ++i) {
-        mask[i] = DequantiScale(cur_mask_data[i], false, mask_scale_data[i]);
-      }
+      std::vector<float> mask(cur_mask_data, cur_mask_data + num_mask);
+
       dets.emplace_back(
           static_cast<int>(id),
           confidence,
           bbox,
           yolo8_seg_config_.class_names[static_cast<int>(id)].c_str(),
           std::move(mask)
-          );
-      
+      );
     }
   }
 }
@@ -510,8 +597,10 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
   perception.seg.height = static_cast<int>(model_h * valid_h_ratio);
   perception.seg.width = static_cast<int>(model_w * valid_w_ratio);
 
-  int16_t *proto_data = proto->GetTensorData<int16_t>();
-  float proto_scale_data = proto->properties.scale.scaleData[0];
+//   int16_t *proto_data = proto->GetTensorData<int16_t>();
+  float *proto_data = proto->GetTensorData<float>();
+//   float proto_scale_data = proto->properties.scale.scaleData[0];
+  float proto_scale_data = 1.0f;
   int num_mask = yolo8_seg_config_.num_mask;
   perception.seg.data.resize(valid_h * valid_w);
   perception.seg.seg.resize(valid_h * valid_w);
@@ -565,7 +654,8 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
     
     float sum;
     for (int h = y1_crop; h < y2_crop && h < valid_h; ++h) {
-      int16_t *cur_proto_data = proto_data + (h * proto_w + x1_crop) * num_mask;
+    //   int16_t *cur_proto_data = proto_data + (h * proto_w + x1_crop) * num_mask;
+        float *cur_proto_data = proto_data + (h * proto_w + x1_crop) * num_mask;
       for (int w = x1_crop; w < x2_crop && w < valid_w; ++w) {
         sum = 0.;
         for (size_t i = 0; i < static_cast<size_t>(num_mask); ++i) {

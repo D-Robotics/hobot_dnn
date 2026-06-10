@@ -38,9 +38,16 @@ def generate_launch_description():
         get_package_prefix('dnn_node_example'),
         "lib/dnn_node_example")
     print("dnn_node_example_path is ", dnn_node_example_path)
-    cp_cmd = "cp -r " + dnn_node_example_path + "/config ."
-    print("cp_cmd is ", cp_cmd)
-    os.system(cp_cmd)
+    
+    # 判断当前目录下是否存在 config 文件夹
+    if os.path.isdir("config"):
+        print("当前路径下 config 文件夹已存在")
+    else:
+        print("当前路径下 config 文件夹不存在, 进行copy操作")
+    
+        cp_cmd = "cp -r " + dnn_node_example_path + "/config ."
+        print("cp_cmd is ", cp_cmd)
+        os.system(cp_cmd)
 
     # args that can be set from the command line or a default will be used
     config_file_launch_arg = DeclareLaunchArgument(
@@ -50,10 +57,10 @@ def generate_launch_description():
         "dnn_example_dump_render_img", default_value=TextSubstitution(text="0")
     )
     image_width_launch_arg = DeclareLaunchArgument(
-        "dnn_example_image_width", default_value=TextSubstitution(text="960")
+        "dnn_example_image_width", default_value=TextSubstitution(text="640")
     )
     image_height_launch_arg = DeclareLaunchArgument(
-        "dnn_example_image_height", default_value=TextSubstitution(text="544")
+        "dnn_example_image_height", default_value=TextSubstitution(text="640")
     )
     msg_pub_topic_name_launch_arg = DeclareLaunchArgument(
         "dnn_example_msg_pub_topic_name", default_value=TextSubstitution(text="hobot_dnn_detection")
@@ -85,7 +92,8 @@ def generate_launch_description():
                     {"image_height": LaunchConfiguration('dnn_example_image_height')},
                     {"io_method": 'ros'},
                     {"video_device": LaunchConfiguration('device')},
-                    {"frame_ts_type": 'realtime'}
+                    {"frame_ts_type": 'realtime'},
+                    {"rotation": 90.0}
                 ],
                 extra_arguments=[{'use_intra_process_comms': True}],
             ),
