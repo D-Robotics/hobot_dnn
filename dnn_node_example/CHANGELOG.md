@@ -1,8 +1,9 @@
 # Changelog for package dnn_node_example
 
-tros_2.6.3 (2026-05-20)
+tros_2.6.3 (2026-06-29)
 ------------------
 1. 新增 yoloe26-seg 在 X5 S100 平台推理。
+2. 拓展 yolov8-seg 在 X5 S100 平台的非裁剪模型推理的支持。
 
 tros_2.6.2 (2026-05-08)
 ------------------

@@ -208,6 +208,8 @@ elseif(PLATFORM_X5)
     src/output_parser/segmentation/ptq_unet_output_parser.cpp
     src/output_parser/segmentation/ptq_yolo8_seg_output_parser.cpp
     src/output_parser/segmentation/ptq_stdc_output_parser.cpp
+    src/output_parser/segmentation/ptq_yolo26_seg_output_parser.cpp
+    src/output_parser/segmentation/ptq_yolo26e_seg_output_parser.cpp
   )
   target_link_libraries(${PROJECT_NAME}
     alog
