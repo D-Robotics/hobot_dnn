@@ -378,6 +378,92 @@ void ParseTensor(std::shared_ptr<DNNTensor> clses,
   }
 }
 
+void ParseTensorFloat(std::shared_ptr<DNNTensor> clses,
+                 std::shared_ptr<DNNTensor> boxes,
+                 std::shared_ptr<DNNTensor> masks,
+                 int layer,
+                 std::vector<YOLOSeg> &dets) {
+  clses->CACHE_INVALIDATE();
+  boxes->CACHE_INVALIDATE();
+  masks->CACHE_INVALIDATE();
+
+  int num_classes = yolo8_seg_config_.class_num;
+  int reg_max = yolo8_seg_config_.reg_max;
+  int stride = yolo8_seg_config_.strides[layer];
+  int num_mask = yolo8_seg_config_.num_mask;
+
+  int height, width;
+  auto ret = hobot::dnn_node::output_parser::get_tensor_hw(boxes, &height, &width);
+  if (ret != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("yolo8_seg_parser"), "get_tensor_hw failed");
+    return;
+  }
+
+  float *cls_data = clses->GetTensorData<float>();
+  float *box_data = boxes->GetTensorData<float>();
+  float *mask_data = masks->GetTensorData<float>();
+
+  for (int h = 0; h < height; ++h) {
+    for (int w = 0; w < width; ++w) {
+      float *cur_cls_data = cls_data;
+      float *cur_box_data = box_data;
+      float *cur_mask_data = mask_data;
+
+      cls_data += num_classes;
+      box_data += reg_max * 4;   
+      mask_data += num_mask;
+
+      int id = argmax(cur_cls_data, cur_cls_data + num_classes);
+      float max_score = cur_cls_data[id];
+
+      if (max_score < score_threshold_) {
+        continue;
+      }
+
+      double confidence = 1.0 / (1.0 + std::exp(-max_score));
+
+      // 解码边界框（直接使用 float 值）
+      size_t box_id = 0;
+      std::vector<float> decoded_boxes(4, 0.0f);
+      for (size_t i = 0; i < 4; ++i) {
+        float sum = 0.0f;
+        for (int reg = 0; reg < reg_max; ++reg) {
+          float distribute_score;
+          if (is_performance_) {
+            distribute_score = fastExp(cur_box_data[box_id]);  
+          } else {
+            distribute_score = std::exp(cur_box_data[box_id]);
+          }
+          sum += distribute_score;
+          decoded_boxes[i] += distribute_score * reg;
+          ++box_id;
+        }
+        decoded_boxes[i] /= sum;
+      }
+
+      float xmin = (w + 0.5f - decoded_boxes[0]) * stride;
+      float ymin = (h + 0.5f - decoded_boxes[1]) * stride;
+      float xmax = (w + 0.5f + decoded_boxes[2]) * stride;
+      float ymax = (h + 0.5f + decoded_boxes[3]) * stride;
+
+      if (xmax <= 0.0f || ymax <= 0.0f) continue;
+      if (xmin > xmax || ymin > ymax) continue;
+
+      Bbox bbox(xmin, ymin, xmax, ymax);
+
+      std::vector<float> mask(cur_mask_data, cur_mask_data + num_mask);
+
+      dets.emplace_back(
+          static_cast<int>(id),
+          confidence,
+          bbox,
+          yolo8_seg_config_.class_names[static_cast<int>(id)].c_str(),
+          std::move(mask)
+      );
+    }
+  }
+}
+
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output, 
     const int resized_img_h,
@@ -396,8 +482,6 @@ int32_t Parse(
                         model_h,
                         model_w,
                         result->perception);
-  
-
 
   int process_time_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -436,10 +520,24 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
       std::shared_ptr<std::vector<YOLOSeg>> sp_det = nullptr;
       std::vector<YOLOSeg> _dets;
       auto start = std::chrono::steady_clock::now();
-      ParseTensor(output_tensors[i * 3], 
+      if (output_tensors[i * 3 + 1]->properties.quantiType == hbDNNQuantiType::NONE &&
+          output_tensors[i * 3 + 2]->properties.quantiType == hbDNNQuantiType::NONE) {
+        ParseTensorFloat(output_tensors[i * 3],
                   output_tensors[i * 3 + 1], 
                   output_tensors[i * 3 + 2],
                   static_cast<int>(i), _dets);
+      } else if (output_tensors[i * 3 + 1]->properties.quantiType == hbDNNQuantiType::SCALE &&
+                 output_tensors[i * 3 + 2]->properties.quantiType == hbDNNQuantiType::SCALE) {
+        ParseTensor(output_tensors[i * 3], 
+                  output_tensors[i * 3 + 1], 
+                  output_tensors[i * 3 + 2],
+                  static_cast<int>(i), _dets);
+      } else {
+        RCLCPP_ERROR(rclcpp::get_logger("yolo8_seg_parser"),
+                    "tensor quantiType is not supported, tensor[%d] quantiType: %d, tensor[%d] quantiType: %d",
+                    i * 3 + 1, output_tensors[i * 3 + 1]->properties.quantiType,
+                    i * 3 + 2, output_tensors[i * 3 + 2]->properties.quantiType);
+      }
       int time_ms =
           std::chrono::duration_cast<std::chrono::milliseconds>(
               std::chrono::steady_clock::now() - start)
@@ -510,9 +608,17 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
   perception.seg.height = static_cast<int>(model_h * valid_h_ratio);
   perception.seg.width = static_cast<int>(model_w * valid_w_ratio);
 
-  int16_t *proto_data = proto->GetTensorData<int16_t>();
-  float proto_scale_data = proto->properties.scale.scaleData[0];
   int num_mask = yolo8_seg_config_.num_mask;
+  bool proto_is_float = (proto->properties.quantiType == hbDNNQuantiType::NONE);
+  float *proto_data_f32 = nullptr;
+  int16_t *proto_data_s16 = nullptr;
+  float proto_scale_data = 1.0f;
+  if (proto_is_float) {
+    proto_data_f32 = proto->GetTensorData<float>();
+  } else {
+    proto_data_s16 = proto->GetTensorData<int16_t>();
+    proto_scale_data = proto->properties.scale.scaleData[0];
+  }
   perception.seg.data.resize(valid_h * valid_w);
   perception.seg.seg.resize(valid_h * valid_w);
   for (const auto &result : results) {
@@ -562,23 +668,44 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
       assert(y1_crop >= 0 && y1_crop < perception.seg.valid_h);
       assert(y2_crop >= y1_crop && y2_crop < perception.seg.valid_h);
     }
-    
-    float sum;
-    for (int h = y1_crop; h < y2_crop && h < valid_h; ++h) {
-      int16_t *cur_proto_data = proto_data + (h * proto_w + x1_crop) * num_mask;
-      for (int w = x1_crop; w < x2_crop && w < valid_w; ++w) {
-        sum = 0.;
-        for (size_t i = 0; i < static_cast<size_t>(num_mask); ++i) {
-          sum += mask[i] * cur_proto_data[i] * proto_scale_data;
+
+    if (proto_is_float) {
+      float sum;
+      for (int h = y1_crop; h < y2_crop && h < valid_h; ++h) {
+        float *cur_proto_data = proto_data_f32 + (h * proto_w + x1_crop) * num_mask;
+        for (int w = x1_crop; w < x2_crop && w < valid_w; ++w) {
+          sum = 0.;
+          for (size_t i = 0; i < static_cast<size_t>(num_mask); ++i) {
+            sum += mask[i] * cur_proto_data[i];
+          }
+          if (sum > 0.) {
+            hobot::dnn_node::output_parser::seg_background_adjust(&perception.seg.seg[h * valid_w + w],
+                                                                  &perception.seg.data[h * valid_w + w],
+                                                                  result.id,
+                                                                  background_id,
+                                                                  have_background);
+          }
+          cur_proto_data += num_mask;
         }
-        if (sum > 0.) {
-          hobot::dnn_node::output_parser::seg_background_adjust(&perception.seg.seg[h * valid_w + w],
-                                                                &perception.seg.data[h * valid_w + w],
-                                                                result.id,
-                                                                background_id,
-                                                                have_background);
+      }
+    } else {
+      float sum;
+      for (int h = y1_crop; h < y2_crop && h < valid_h; ++h) {
+        int16_t *cur_proto_data = proto_data_s16 + (h * proto_w + x1_crop) * num_mask;
+        for (int w = x1_crop; w < x2_crop && w < valid_w; ++w) {
+          sum = 0.;
+          for (size_t i = 0; i < static_cast<size_t>(num_mask); ++i) {
+            sum += mask[i] * cur_proto_data[i] * proto_scale_data;
+          }
+          if (sum > 0.) {
+            hobot::dnn_node::output_parser::seg_background_adjust(&perception.seg.seg[h * valid_w + w],
+                                                                  &perception.seg.data[h * valid_w + w],
+                                                                  result.id,
+                                                                  background_id,
+                                                                  have_background);
+          }
+          cur_proto_data += num_mask;
         }
-        cur_proto_data += num_mask;
       }
     }
   }
