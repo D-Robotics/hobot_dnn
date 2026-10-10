@@ -116,7 +116,7 @@ Compilation options can control the dependencies and functionalities of compilin
 
 Users need to inherit the DnnNode virtual base class and implement virtual interfaces such as configuration.
 
-For data and interface descriptions in the dnn node package, please refer to the API manual: docs/API-Manual/API-Manual.md
+For data and interface descriptions in the dnn node package, please refer to the API manual: docs/API-Manual/API-Manual_EN.md
 
 ## Workflow
 
